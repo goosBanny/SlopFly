@@ -40,6 +40,7 @@ import com.moneybags.tempfly.event.FlightUserInitializedEvent;
 import com.moneybags.tempfly.fly.RequirementProvider.InquiryType;
 import com.moneybags.tempfly.fly.result.FlightResult;
 import com.moneybags.tempfly.hook.TempFlyHook;
+import com.moneybags.tempfly.hook.TerritoryHook;
 import com.moneybags.tempfly.hook.region.CompatRegion;
 import com.moneybags.tempfly.user.FlightUser;
 import com.moneybags.tempfly.user.UserLoader;
