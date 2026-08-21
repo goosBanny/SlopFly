@@ -44,7 +44,7 @@ public class CmdGiveAll extends TimeCommand {
 				U.m(p, V.timeMaxSelf);
 				
 				amount2 = maxTime - time;
-				if (amount <= 0) {
+				if (amount2 <= 0) {
 					continue;
 				}
 			}
@@ -52,6 +52,11 @@ public class CmdGiveAll extends TimeCommand {
 			U.m((Player)p, manager.regexString(V.timeGivenSelf, amount2));
 		}
 		U.m(s, manager.regexString(V.timeGivenSelf, amount));
+	}
+
+	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.giveall");
 	}
 
 	@Override

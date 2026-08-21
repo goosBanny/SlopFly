@@ -28,14 +28,14 @@ public class FlightEnvironment implements RequirementProvider {
 	private Map<String, RelativeTimeRegion> rtRegions = new HashMap<>();
 	private Map<String, RelativeTimeRegion> rtWorlds = new HashMap<>();
 	
-	private List<String> blackRegions = new ArrayList<>();
-	private List<String> blackWorlds = new ArrayList<>();
+	private java.util.Set<String> blackRegions = new java.util.HashSet<>();
+	private java.util.Set<String> blackWorlds = new java.util.HashSet<>();
 	
-	private List<String> whiteRegions = new ArrayList<>();
-	private List<String> whiteWorlds = new ArrayList<>();
+	private java.util.Set<String> whiteRegions = new java.util.HashSet<>();
+	private java.util.Set<String> whiteWorlds = new java.util.HashSet<>();
 	
-	private List<String> freeRegions = new ArrayList<>();
-	private List<String> freeWorlds = new ArrayList<>();
+	private java.util.Set<String> freeRegions = new java.util.HashSet<>();
+	private java.util.Set<String> freeWorlds = new java.util.HashSet<>();
 	
 	
 	
@@ -45,9 +45,20 @@ public class FlightEnvironment implements RequirementProvider {
 	private Map<String, Float> speedRegions = new HashMap<>();
 	
 	
+	public FlightEnvironment() {
+	}
+
 	public FlightEnvironment(FlightManager manager) {
 		this.manager = manager;
 		onTempflyReload();
+	}
+
+	public void addRelativeTimeRegion(RelativeTimeRegion region) {
+		rtRegions.put(region.getName(), region);
+	}
+
+	public void addInfiniteRegion(String region) {
+		freeRegions.add(region);
 	}
 
 	public FlightManager getFlightManager() {
@@ -226,6 +237,9 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Deprecated
 	public boolean flyAllowed(Location loc) {
+		if (loc == null || loc.getWorld() == null) {
+			return false;
+		}
 		if (manager.getTempFly().getHookManager().hasRegionProvider()) {
 			for (CompatRegion r: manager.getTempFly().getHookManager().getRegionProvider().getApplicableRegions(loc)) {
 				if (blackRegions.contains(r.getId())) {
@@ -241,6 +255,9 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Override
 	public FlightResult handleFlightInquiry(FlightUser user, CompatRegion[] regions) {
+		if (regions == null) {
+			return new ResultAllow(this, InquiryType.REGION, V.requirePassDefault);
+		}
 		for (CompatRegion region: regions) {
 			FlightResult result = handleFlightInquiry(user, region);
 			if (!result.isAllowed()) {
@@ -255,6 +272,9 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Override
 	public FlightResult handleFlightInquiry(FlightUser user, CompatRegion r) {
+		if (r == null) {
+			return new ResultAllow(this, InquiryType.REGION, V.requirePassDefault);
+		}
 		return isDisabled(r) || !isWhitelisted(r) ? new ResultDeny(DenyReason.DISABLED_REGION, this, InquiryType.REGION, V.requireFailRegion, !V.damageRegion)
 				: new ResultAllow(this, InquiryType.REGION, V.requirePassDefault);
 	}
@@ -264,6 +284,9 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Override
 	public FlightResult handleFlightInquiry(FlightUser user, World world) {
+		if (world == null) {
+			return new ResultAllow(this, InquiryType.WORLD, V.requirePassDefault);
+		}
 		return isDisabled(world) || !isWhitelisted(world) ? new ResultDeny(DenyReason.DISABLED_WORLD, this, InquiryType.WORLD, V.requireFailWorld, !V.damageWorld)
 				: new ResultAllow(this, InquiryType.WORLD, V.requirePassDefault);
 	}
@@ -273,6 +296,9 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Override
 	public FlightResult handleFlightInquiry(FlightUser user, Location loc) {
+		if (loc == null) {
+			return new ResultAllow(this, InquiryType.LOCATION, V.requirePassDefault);
+		}
 		if (user.hasFlightRequirement(this, InquiryType.LOCATION)) {
 			return loc.getBlockY() <= V.maxY-5 ? new ResultAllow(this, InquiryType.LOCATION, V.requirePassDefault) :
 				new ResultDeny(DenyReason.OTHER, this, InquiryType.LOCATION, 
@@ -290,18 +316,16 @@ public class FlightEnvironment implements RequirementProvider {
 
 	@Override
 	public void onTempflyReload() {
-		blackRegions = Files.config.contains("general.disabled.regions") ? Files.config.getStringList("general.disabled.regions") : new ArrayList<>();
-		blackWorlds = Files.config.contains("general.disabled.worlds") ? Files.config.getStringList("general.disabled.worlds") : new ArrayList<>();
+		blackRegions = new java.util.HashSet<>(Files.config.contains("general.disabled.regions") ? Files.config.getStringList("general.disabled.regions") : new ArrayList<>());
+		blackWorlds = new java.util.HashSet<>(Files.config.contains("general.disabled.worlds") ? Files.config.getStringList("general.disabled.worlds") : new ArrayList<>());
 		
-		whiteRegions = Files.config.contains("general.whitelist.regions") ? Files.config.getStringList("general.whitelist.regions") : new ArrayList<>();
-		whiteWorlds = Files.config.contains("general.whitelist.worlds") ? Files.config.getStringList("general.whitelist.worlds") : new ArrayList<>();
-	
-		whiteRegions = Files.config.contains("general.whitelist.regions") ? Files.config.getStringList("general.whitelist.regions") : new ArrayList<>();
-		whiteWorlds = Files.config.contains("general.whitelist.worlds") ? Files.config.getStringList("general.whitelist.worlds") : new ArrayList<>();
+		whiteRegions = new java.util.HashSet<>(Files.config.contains("general.whitelist.regions") ? Files.config.getStringList("general.whitelist.regions") : new ArrayList<>());
+		whiteWorlds = new java.util.HashSet<>(Files.config.contains("general.whitelist.worlds") ? Files.config.getStringList("general.whitelist.worlds") : new ArrayList<>());
 		
-		freeRegions = Files.config.contains("general.time.infinite.regions") ? Files.config.getStringList("general.time.infinite.regions") : new ArrayList<>();
-		freeWorlds = Files.config.contains("general.time.infinite.worlds") ? Files.config.getStringList("general.time.infinite.worlds") : new ArrayList<>();
+		freeRegions = new java.util.HashSet<>(Files.config.contains("general.time.infinite.regions") ? Files.config.getStringList("general.time.infinite.regions") : new ArrayList<>());
+		freeWorlds = new java.util.HashSet<>(Files.config.contains("general.time.infinite.worlds") ? Files.config.getStringList("general.time.infinite.worlds") : new ArrayList<>());
 		
+		rtWorlds.clear();
 		ConfigurationSection csRtW = Files.config.getConfigurationSection("other.relative_time.worlds");
 		if (csRtW != null) {
 			for (String s : csRtW.getKeys(false)) {
@@ -309,20 +333,23 @@ public class FlightEnvironment implements RequirementProvider {
 						Files.config.getDouble("other.relative_time.worlds." + s, 1), true, s));
 			}
 		}
+		rtRegions.clear();
 		ConfigurationSection csRtR = Files.config.getConfigurationSection("other.relative_time.regions");
-		if (csRtW != null) {
+		if (csRtR != null) {
 			for (String s : csRtR.getKeys(false)) {
 				rtRegions.put(s, new RelativeTimeRegion(
 						Files.config.getDouble("other.relative_time.regions." + s, 1), false, s));
 			}
 		}
 		
+		speedWorlds.clear();
 		ConfigurationSection csSpeedW = Files.config.getConfigurationSection("general.flight.speed.worlds");
 		if (csSpeedW != null) {
 			for (String s : csSpeedW.getKeys(false)) {
 				speedWorlds.put(s, (float) Files.config.getDouble("general.flight.speed.worlds." + s, 1));
 			}
 		}
+		speedRegions.clear();
 		ConfigurationSection csSpeedR = Files.config.getConfigurationSection("general.flight.speed.regions");
 		if (csSpeedR != null) {
 			for (String s : csSpeedR.getKeys(false)) {
@@ -340,8 +367,6 @@ public class FlightEnvironment implements RequirementProvider {
 		}
 		
 		allowPreferredSpeed = Files.config.getBoolean("general.flight.speed.user_preference", true);
-		
-		
 	}
 	
 	

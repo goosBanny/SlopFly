@@ -43,7 +43,7 @@ public abstract class TerritoryHook extends TempFlyHook {
 	
 	
 	private TerritoryTracker manualTracker = null;
-	private Map<Player, TerritoryWrapper> locationCache = new HashMap<>();
+	private Map<UUID, TerritoryWrapper> locationCache = new java.util.concurrent.ConcurrentHashMap<>();
 	private Map<String, TerritoryWrapper> wrapperCache = new HashMap<>();
 	
 	public void startManualTracking() {
@@ -76,16 +76,17 @@ public abstract class TerritoryHook extends TempFlyHook {
 		if (rawTerritory instanceof TerritoryWrapper) {
 			rawTerritory = ((TerritoryWrapper)rawTerritory).getRawTerritory();
 		}
-		if (locationCache.containsKey(p)) {
+		UUID uuid = p.getUniqueId();
+		if (locationCache.containsKey(uuid)) {
 			// Player already being tracked.
-			if (locationCache.get(p).getRawTerritory().equals(rawTerritory)) {
+			if (locationCache.get(uuid).getRawTerritory().equals(rawTerritory)) {
 				// Player is already on this island...
 				return;
 			}
 			// Player is now on 2 islands at once, this is a bug.
 			Console.severe("If you are seeing this message there may be a bug. Please contact the tempfly dev with this info: TerritoryHook | onTerritoeyEnter()");
-			TerritoryWrapper territory = locationCache.get(p);
-			locationCache.remove(p);
+			TerritoryWrapper territory = locationCache.get(uuid);
+			locationCache.remove(uuid);
 			if(!locationCache.containsValue(territory)) {
 				wrapperCache.remove(getTerritoryIdentifier(rawTerritory));
 			}
@@ -94,7 +95,7 @@ public abstract class TerritoryHook extends TempFlyHook {
 		TerritoryWrapper territory = getTerritoryWrapper(rawTerritory);
 		if (V.debug) {Console.debug("--|> Island Identifier: " + getTerritoryIdentifier(rawTerritory), "------ End Territory Enter ------", "");}
 		
-		locationCache.put(p, territory);
+		locationCache.put(uuid, territory);
 		FlightUser user = tempfly.getFlightManager().getUser(p);
 		if (user == null) {
 			return;
@@ -120,9 +121,10 @@ public abstract class TerritoryHook extends TempFlyHook {
 		if (V.debug) {
 			Console.debug("", "------ On territory Exit ------", "--| Player: " + p.getName());
 		}
-		if (locationCache.containsKey(p)) {
-			TerritoryWrapper currentTerritory = locationCache.get(p);
-			locationCache.remove(p);
+		UUID uuid = p.getUniqueId();
+		if (locationCache.containsKey(uuid)) {
+			TerritoryWrapper currentTerritory = locationCache.get(uuid);
+			locationCache.remove(uuid);
 			if(!locationCache.containsValue(currentTerritory)) {
 				Console.debug("----------------- removing wrapper from cache");
 				wrapperCache.remove(getTerritoryIdentifier(currentTerritory.getRawTerritory()));
@@ -142,7 +144,7 @@ public abstract class TerritoryHook extends TempFlyHook {
 				if (user == null) {
 					return;
 				}
-				if (user.hasFlightRequirement(provider, InquiryType.OUT_OF_SCOPE) && !locationCache.containsKey(user.getPlayer())) {
+				if (user.hasFlightRequirement(provider, InquiryType.OUT_OF_SCOPE) && !locationCache.containsKey(p.getUniqueId())) {
 					user.submitFlightResult(new ResultAllow(provider, InquiryType.OUT_OF_SCOPE, V.requirePassDefault));
 				}
 			}
@@ -174,9 +176,12 @@ public abstract class TerritoryHook extends TempFlyHook {
 	 */
 	public Player[] getPlayersOn(TerritoryWrapper territory) {
 		List<Player> players = new ArrayList<>();
-		for (Map.Entry<Player, TerritoryWrapper> entry: locationCache.entrySet()) {
+		for (Map.Entry<UUID, TerritoryWrapper> entry: locationCache.entrySet()) {
 			if (entry.getValue().equals(territory)) {
-				players.add(entry.getKey());
+				Player p = Bukkit.getPlayer(entry.getKey());
+				if (p != null && p.isOnline()) {
+					players.add(p);
+				}
 			}
 		}
 		return players.toArray(new Player[players.size()]);
@@ -186,14 +191,14 @@ public abstract class TerritoryHook extends TempFlyHook {
 	 * @return true if the player is currently being tracked on an island
 	 */
 	public boolean isCurrentlyTracking(Player p) {
-		return locationCache.containsKey(p);
+		return p != null && locationCache.containsKey(p.getUniqueId());
 	}
 	
 	/**
 	 * @return The island the player is currently being tracked on.
 	 */
 	public TerritoryWrapper getTrackedTerritory(Player p) {
-		return locationCache.get(p);
+		return p != null ? locationCache.get(p.getUniqueId()) : null;
 	}
 	
 	@Override
@@ -217,9 +222,11 @@ public abstract class TerritoryHook extends TempFlyHook {
 	@Override
 	public void onUserQuit(FlightUser user) {
 		Player p = user.getPlayer();
-		TerritoryWrapper territory = getTerritoryAt(p.getLocation());
-		if (territory != null) {
-			onTerritoryExit(p);
+		if (p != null) {
+			if (locationCache.containsKey(p.getUniqueId())) {
+				onTerritoryExit(p);
+			}
+			locationCache.remove(p.getUniqueId());
 		}
 	}
 	
@@ -271,11 +278,14 @@ public abstract class TerritoryHook extends TempFlyHook {
 		
 		@EventHandler (priority = EventPriority.MONITOR, ignoreCancelled = true)
 		public void on(PlayerMoveEvent e) {
-			Location to = e.getTo();
-			if (e.getFrom().getBlock().equals(to.getBlock())) {
+			if (V.isMovementTaskMode()) {
 				return;
 			}
-			hook.updateLocation(e.getPlayer(), e.getTo());
+			Location to = e.getTo();
+			if (to == null || (e.getFrom().getBlockX() == to.getBlockX() && e.getFrom().getBlockY() == to.getBlockY() && e.getFrom().getBlockZ() == to.getBlockZ() && e.getFrom().getWorld().equals(to.getWorld()))) {
+				return;
+			}
+			hook.updateLocation(e.getPlayer(), to);
 		}
 		
 		@EventHandler (priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -293,6 +303,4 @@ public abstract class TerritoryHook extends TempFlyHook {
 			hook.updateLocation(e.getPlayer(), e.getPlayer().getLocation());
 		}
 	}
-	
-
 }

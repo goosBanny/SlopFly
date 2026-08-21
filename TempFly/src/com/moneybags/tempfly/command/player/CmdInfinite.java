@@ -34,6 +34,7 @@ public class CmdInfinite extends TempFlyCommand {
 			switch (args[1].toLowerCase()) {
 			case "on": case "enable":
 				toggleVal = true;
+				break;
 			case "off": case "disable":
 				break;
 			default:
@@ -49,6 +50,11 @@ public class CmdInfinite extends TempFlyCommand {
 			user.enableFlight();
 		}
 		U.m(s, toggleVal ? V.flyInfiniteEnabled : V.flyInfiniteDisabled);
+	}
+
+	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.infinite.toggle");
 	}
 
 	@Override

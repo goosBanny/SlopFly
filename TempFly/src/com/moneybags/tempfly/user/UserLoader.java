@@ -46,16 +46,14 @@ public class UserLoader implements Runnable {
 		final TimeManager timeManager = manager.getTempFly().getTimeManager();
 		
 		if (bridge.hasSqlEnabled()) {
-			PreparedStatement st = bridge.prepareStatement("INSERT IGNORE INTO tempfly_data(uuid) VALUES(?)");
-			try {
+			try (java.sql.Connection conn = bridge.getConnection();
+			     PreparedStatement st = conn.prepareStatement("INSERT IGNORE INTO tempfly_data(uuid) VALUES(?)")) {
 				st.setString(1, u.toString());
-				st.execute();
-				st.close();
+				st.executeUpdate();
 			} catch (SQLException e) {
 				e.printStackTrace();
 				return;
 			}
-			
 		}
 		
 		

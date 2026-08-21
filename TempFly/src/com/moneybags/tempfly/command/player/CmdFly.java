@@ -133,10 +133,15 @@ public class CmdFly extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.toggle.self") || U.hasPermission(s, "tempfly.toggle.other");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		if (args.length == 2 && U.hasPermission(s, "tempfly.toggle.other")) {
 			return getPlayerArguments(args[1]);
-		} else if (args.length == 2 && U.hasPermission(s, "tempfly.toggle.self")) {
+		} else if (args.length == 2 && U.hasPermission(s, "tempfly.toggle.self") && s instanceof Player) {
 			return Arrays.asList(((Player)s).getName());
 		}
 		return new ArrayList<>();

@@ -59,8 +59,30 @@ public class U {
 		return (x == null || y == null || z == null) ? null : new Location(world, x, y , z);
 	}
 	
+	private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+
 	public static String cc(String m) {
-		return ChatColor.translateAlternateColorCodes('&', Strings.nullToEmpty(m));
+		if (m == null || m.isEmpty()) {
+			return "";
+		}
+
+		if (m.contains("&#")) {
+			java.util.regex.Matcher matcher = HEX_PATTERN.matcher(m);
+			StringBuilder sb = new StringBuilder(m.length() + 32);
+			while (matcher.find()) {
+				String hex = matcher.group(1);
+				StringBuilder replacement = new StringBuilder(14);
+				replacement.append(ChatColor.COLOR_CHAR).append('x');
+				for (int i = 0; i < 6; i++) {
+					replacement.append(ChatColor.COLOR_CHAR).append(hex.charAt(i));
+				}
+				matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement.toString()));
+			}
+			matcher.appendTail(sb);
+			m = sb.toString();
+		}
+
+		return ChatColor.translateAlternateColorCodes('&', m);
 	}
 	
 	public static String strip(String m) {
@@ -72,7 +94,8 @@ public class U {
 			return;
 		}
 
-		p.sendMessage(s.replace(PREFIX, V.prefix));
+		String pfx = V.prefix != null ? V.prefix : "";
+		p.sendMessage(s.replace(PREFIX, pfx));
 	}
 	
 	public static void m(OfflinePlayer p, String s) {
@@ -82,11 +105,12 @@ public class U {
 	}
 	
 	public static void m(Player p, String s) {
-		if (s == null || s.isEmpty() || s.equals(V.prefix) || s.equals(PREFIX)) {
+		if (s == null || s.isEmpty() || (V.prefix != null && s.equals(V.prefix)) || s.equals(PREFIX)) {
 			return;
 		}
 
-		p.sendMessage(s.replace(PREFIX, V.prefix));
+		String pfx = V.prefix != null ? V.prefix : "";
+		p.sendMessage(s.replace(PREFIX, pfx));
 	}
 	
 	public static boolean hasPermission(CommandSender s, String perm){

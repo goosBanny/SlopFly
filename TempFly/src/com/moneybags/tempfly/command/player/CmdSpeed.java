@@ -98,23 +98,30 @@ public class CmdSpeed extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.speed.self") || U.hasPermission(s, "tempfly.speed.other");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		if (args.length > 3) {
 			return new ArrayList<>();
 		}
 		if (args.length == 3) {
 			return U.hasPermission(s, "tempfly.speed.other") ? getPlayerArguments(args[2]) 
-					: U.hasPermission(s, "tempfly.speed.self") ? Arrays.asList(((Player)s).getName()) : new ArrayList<>();
+					: (U.hasPermission(s, "tempfly.speed.self") && s instanceof Player) ? Arrays.asList(((Player)s).getName()) : new ArrayList<>();
 		}
-		if (args.length >= 2 && !U.hasPermission(s, "tempfly.speed.self") || (s instanceof Player)) {
-			return new ArrayList<>();
+		if (args.length == 2) {
+			if (!U.hasPermission(s, "tempfly.speed.self") && !U.hasPermission(s, "tempfly.speed.other")) {
+				return new ArrayList<>();
+			}
+			if (s instanceof Player) {
+				FlightUser user = tempfly.getFlightManager().getUser((Player)s);
+				return getRange(1, (int)Math.floor(user.getMaxSpeed()));
+			} else {
+				return getRange(0, 10);
+			}
 		}
-		if (s instanceof Player) {
-			FlightUser user = tempfly.getFlightManager().getUser((Player)s);
-			Console.debug(user.getMaxSpeed());
-			return getRange(1, (int)Math.floor(user.getMaxSpeed()));
-		} else {
-			return getRange(0, 10);
-		}
+		return new ArrayList<>();
 	}
 }

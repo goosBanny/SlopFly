@@ -18,14 +18,14 @@ import com.moneybags.tempfly.util.V;
 
 public class TempFlyTabCompleter implements TabCompleter, Listener {
 	
-	private CommandManager manager;
+	private final CommandManager manager;
 	
 	public TempFlyTabCompleter(CommandManager manager) {
 		this.manager = manager;
 		try {
 			Class.forName("org.bukkit.event.server.TabCompleteEvent");
 			Bukkit.getServer().getPluginManager().registerEvents(this, manager.getTempFly());
-		} catch (ClassNotFoundException e) {}
+		} catch (ClassNotFoundException ignored) {}
 	}
 	
 	@Override
@@ -33,13 +33,20 @@ public class TempFlyTabCompleter implements TabCompleter, Listener {
 		if (V.disableTab && !U.hasPermission(s, "tempfly.disable_tab.bypass")) {
 			return new ArrayList<>();
 		}
-		if (args.length == 0) {
-			return manager.getAllCommandBases();
-		} else if (args.length == 1) {
-			return manager.getPartialCommandBases(args[0]);
+		if (args.length == 0 || args.length == 1) {
+			List<String> matches = new ArrayList<>();
+			String partial = args.length == 1 ? args[0] : "";
+			if (U.hasPermission(s, "tempfly.toggle.self") || U.hasPermission(s, "tempfly.toggle.other")) {
+				for (String toggle : manager.getToggleCompletions(false)) {
+					if (toggle.toLowerCase().startsWith(partial.toLowerCase())) {
+						matches.add(toggle);
+					}
+				}
+			}
+			return matches;
 		} else {
 			TempFlyCommand command = manager.getCommand(args);
-			return command == null ? new ArrayList<>() : command.getPotentialArguments(s);
+			return command == null || !command.hasPermission(s) ? new ArrayList<>() : command.getPotentialArguments(s);
 		}
 	}
 	
@@ -54,10 +61,10 @@ public class TempFlyTabCompleter implements TabCompleter, Listener {
 		}
 		
 		List<String> completions = new ArrayList<>();
-		Arrays.asList(U.skipArray(args, 1)).forEach(string -> completions.add(string));
+		Arrays.asList(U.skipArray(args, 1)).forEach(completions::add);
 		if (e.getBuffer().endsWith(" ")) {
 			completions.add("");
 		}
-		e.setCompletions(onTabComplete(e.getSender(), null, "", completions.toArray(new String[completions.size()])));
+		e.setCompletions(onTabComplete(e.getSender(), null, "", completions.toArray(new String[0])));
 	}
 }

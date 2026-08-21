@@ -46,10 +46,10 @@ public class CmdTrailSet extends TempFlyCommand {
 		}
 		
 		if (s.equals(target) && !s.hasPermission("tempfly.trails.set.self")) {
-			U.m(target, V.invalidPermission);
+			U.m(s, V.invalidPermission);
 			return;
 		} else if (!s.equals(target) && !s.hasPermission("tempfly.trails.set.other")) {
-			U.m(target, V.invalidPermission);
+			U.m(s, V.invalidPermission);
 			return;
 		}
 		
@@ -76,18 +76,30 @@ public class CmdTrailSet extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.trails.set.self") || U.hasPermission(s, "tempfly.trails.set.other");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		Console.debug(U.arrayToString(args, " - "));
 		if (args.length <= 2) {
 			if (U.hasPermission(s, "tempfly.trails.set.other")) {
 				return getPlayerArguments(args[1]);
-			} else if (U.hasPermission(s, "tempfly.trails.set.self")) {
+			} else if (U.hasPermission(s, "tempfly.trails.set.self") && s instanceof Player) {
 				return Arrays.asList(((Player)s).getName());
 			}
 		} else if (args.length <= 3) {
-			List<String> particles = new ArrayList<>();
-			Arrays.asList(Effect.values()).stream().forEach(particle -> particles.add(particle.toString()));
-			return particles;
+			if (U.hasPermission(s, "tempfly.trails.set.self") || U.hasPermission(s, "tempfly.trails.set.other")) {
+				List<String> particles = new ArrayList<>();
+				String lower = args[2].toLowerCase();
+				for (Particle particle : Particle.values()) {
+					if (particle.name().toLowerCase().startsWith(lower)) {
+						particles.add(particle.name());
+					}
+				}
+				return particles;
+			}
 		}
 		
 		return new ArrayList<>();

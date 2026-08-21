@@ -1,11 +1,13 @@
 package com.moneybags.tempfly.aesthetic.particle;
 
-import java.util.Random;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
-import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -19,53 +21,49 @@ import com.moneybags.tempfly.util.data.DataPointer;
 
 public class Particles {
 
-	private static Class<?>
-	dustOptions = null,
-	blockData;
 	private static TempFly tempfly;
-	private static boolean oldParticles;
+	private static final Map<String, Particle> PARTICLE_CACHE = new ConcurrentHashMap<>();
+	private static Particle defaultParticle = Particle.HAPPY_VILLAGER;
 	
 	public static void initialize(TempFly plugin) {
 		tempfly = plugin;
-		try {dustOptions = Class.forName("org.bukkit.Particle$DustOptions");} catch (Exception e) {}
-		try {blockData = Class.forName("org.bukkit.block.data.BlockData");} catch (Exception e) {}
-		oldParticles = false;
+		PARTICLE_CACHE.clear();
+		Particle def = parseParticle(V.particleType);
+		defaultParticle = def != null ? def : Particle.HAPPY_VILLAGER;
+	}
+
+	public static Particle parseParticle(String name) {
+		if (name == null || name.isEmpty()) {
+			return null;
+		}
+		return PARTICLE_CACHE.computeIfAbsent(name.toUpperCase(Locale.ROOT), key -> {
+			try {
+				return Particle.valueOf(key);
+			} catch (IllegalArgumentException e) {
+				return null;
+			}
+		});
 	}
 	
 	public static void play(Location loc, String s) {
-		if (!oldParticles) {
-			Particle particle = null;
-			try {particle = Particle.valueOf(s.toUpperCase());} catch (Exception e1) {
-				try {particle = Particle.valueOf(V.particleType.toUpperCase());} catch (Exception e2) {
-					particle = Particle.HAPPY_VILLAGER;
-				};
+		if (loc == null || loc.getWorld() == null) return;
+		Particle particle = parseParticle(s);
+		if (particle == null) {
+			particle = defaultParticle;
+		}
+		
+		Class<?> c = particle.getDataType();
+		try {
+			if (DustOptions.class.equals(c)) {
+				ThreadLocalRandom rand = ThreadLocalRandom.current();
+				loc.getWorld().spawnParticle(particle, loc, 1, new DustOptions(Color.fromRGB(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)), 2f));	
+			} else if (org.bukkit.block.data.BlockData.class.equals(c)) {
+				loc.getWorld().spawnParticle(particle, loc, 1, Material.STONE.createBlockData());	
+			} else {
+				loc.getWorld().spawnParticle(particle, loc, 1, 0, 0, 0, 0.1);
 			}
-			
-			Class<?> c = particle.getDataType();
-			try {
-				if (dustOptions != null && dustOptions.equals(c)) {
-					Random rand = new Random();
-					loc.getWorld().spawnParticle(particle, loc, 1, new DustOptions(Color.fromRGB(rand.nextInt(255), rand.nextInt(255), rand.nextInt(255)), 2f));	
-				} else if (blockData != null && blockData.equals(c)) {
-					loc.getWorld().spawnParticle(particle, loc, 1, Material.STONE.createBlockData());	
-				} else {
-					loc.getWorld().spawnParticle(particle, loc, 1, 0, 0, 0, 0.1);
-				}
-			} catch (Exception e) {
-				loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc, 1, 0, 0, 0, 0.1);
-			}
-		} else {
-			Effect particle = null;
-			// This effect value crashes clients and prevents them from joining the server again.
-			if (s != null && s.equalsIgnoreCase("ITEM_BREAK")) {
-				s = "HAPPY_VILLAGER";
-			}
-			try {particle = Effect.valueOf(s.toUpperCase());} catch (Exception e1) {
-				try {particle = Effect.valueOf(V.particleType);} catch (Exception e2) {
-					particle = Effect.valueOf("HAPPY_VILLAGER");
-				}
-			}
-			loc.getWorld().playEffect(loc, particle, 1);
+		} catch (Exception e) {
+			loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc, 1, 0, 0, 0, 0.1);
 		}
 	}
 	

@@ -40,6 +40,11 @@ public class CmdShop extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return V.shop && tempfly.getHookManager().getEconomy() != null && U.hasPermission(s, "tempfly.shop");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		return new ArrayList<>();
 	}

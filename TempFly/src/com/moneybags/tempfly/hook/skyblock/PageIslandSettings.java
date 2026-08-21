@@ -74,7 +74,13 @@ public class PageIslandSettings extends DynamicPage {
 	
 	public PageIslandSettings(GuiSession session) {
 		super(session);
-		IslandSettings settings = hook.getIslandOwnedBy(session.getPlayer().getUniqueId()).getSettings();
+		IslandWrapper island = hook.getIslandOwnedBy(session.getPlayer().getUniqueId());
+		if (island == null) {
+			U.m(session.getPlayer(), hook.requireIsland);
+			session.endSession();
+			return;
+		}
+		IslandSettings settings = island.getSettings();
 		
 		this.inv = Bukkit.createInventory(null, 45, U.cc(title));
 		

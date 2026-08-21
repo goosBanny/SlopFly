@@ -45,7 +45,7 @@ public class CmdPay extends TimeCommand {
 			return;
 		}
 		
-		if ((Player)s == p) {
+		if (((Player)s).getUniqueId().equals(p.getUniqueId())) {
 			U.m(s, V.invalidReciever);
 			return;
 		}
@@ -79,14 +79,20 @@ public class CmdPay extends TimeCommand {
 		TimeManager manager = tempfly.getTimeManager();
 		OfflinePlayer p = parameters.getTarget();
 		double amount = parameters.getAmount();
-		if ((maxTime > -1) && (manager.getTime(p.getUniqueId()) + amount >= maxTime)) {
+		if ((maxTime > -1) && (manager.getTime(p.getUniqueId()) + amount > maxTime)) {
 			U.m(s, manager.regexString(V.timeMaxOther, amount)
 					.replaceAll("\\{PLAYER}", p.getName()));
 			U.m(p, V.timeMaxSelf);
 			return;
 		}
 		
-		manager.removeTime(((Player)s).getUniqueId(), parameters);
+		Player sender = (Player) s;
+		if (manager.getTime(sender.getUniqueId()) < amount) {
+			U.m(s, V.invalidTimeSelf);
+			return;
+		}
+		
+		manager.removeTime(sender.getUniqueId(), parameters);
 		manager.addTime(p.getUniqueId(), parameters);
 		U.m(s, manager.regexString(V.timeSentOther, amount)
 				.replaceAll("\\{PLAYER}", p.getName()));
@@ -94,6 +100,11 @@ public class CmdPay extends TimeCommand {
 			U.m((Player)p, manager.regexString(V.timeSentSelf, amount)
 					.replaceAll("\\{PLAYER}", s.getName()));	
 		}
+	}
+
+	@Override
+	public boolean hasPermission(CommandSender s) {
+		return V.payable && U.hasPermission(s, "tempfly.pay");
 	}
 
 	@Override

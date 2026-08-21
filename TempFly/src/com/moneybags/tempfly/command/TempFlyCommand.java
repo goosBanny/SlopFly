@@ -40,18 +40,11 @@ public abstract class TempFlyCommand {
 	
 	public List<String> getPlayerArguments(String partial) {
 		List<String> matches = new ArrayList<>();
+		String lower = partial.toLowerCase();
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			char[] baseChars = p.getName().toCharArray();
-			if (partial.length() > baseChars.length) {
-				continue;
+			if (p.getName().toLowerCase().startsWith(lower)) {
+				matches.add(p.getName());
 			}
-			for (int i = 0; i < partial.length(); i++) {
-				char partialChar = partial.charAt(i);
-				if (partialChar != baseChars[i]) {
-					continue;
-				}
-			}
-			matches.add(p.getName());
 		}
 		return matches;
 	}
@@ -64,8 +57,11 @@ public abstract class TempFlyCommand {
 		return numbers;
 	}
 	
+	public abstract boolean hasPermission(CommandSender s);
+	
 	public abstract List<String> getPotentialArguments(CommandSender s);
 	
 	public abstract void executeAs(CommandSender s);
 
 }
+

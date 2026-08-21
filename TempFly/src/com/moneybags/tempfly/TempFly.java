@@ -150,9 +150,15 @@ public class TempFly extends JavaPlugin {
 	
 	@Override
 	public void onDisable() {
-		flight.onDisable();
-		gui.endAllSessions();
-		bridge.commitAll();
+		if (flight != null) {
+			flight.onDisable();
+		}
+		if (gui != null) {
+			gui.endAllSessions();
+		}
+		if (bridge != null) {
+			bridge.onDisable();
+		}
 	}
 	
 	/*
@@ -173,15 +179,6 @@ public class TempFly extends JavaPlugin {
 		if (autosave != null) {
 			autosave.cancel();
 			autosave = new AutoSave(bridge).runTaskTimerAsynchronously(this, 0, V.save * 20 * 60);
-		}
-	}
-	
-	@Override
-	public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] args) {
-		if (cmd.getName().equalsIgnoreCase("fly")) {
-			return commands.getTabCompleter().onTabComplete(s, cmd, label, args);
-		} else {
-			return Arrays.asList(args);
 		}
 	}
 	

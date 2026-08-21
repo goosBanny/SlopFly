@@ -69,6 +69,11 @@ public class CmdSet extends TimeCommand {
 	}
 	
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.set");
+	}
+	
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		if (!U.hasPermission(s, "tempfly.set")) {
 			return new ArrayList<>();

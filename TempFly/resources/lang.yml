@@ -41,7 +41,7 @@ general:
     vault_perms: "{PREFIX} &cYou must install the plugin (&fvault&c) for the ability to set offline player time!"
     
   time:
-    format: "&f{QUANTITY}&f{UNIT}"
+    format: "{QUANTITY}{UNIT}"
     given_other: "{PREFIX} &f{PLAYER} &agot {FORMATTED_TIME}&a."
     given_all: "{PREFIX} &aYou gave &fALL &aplayers {FORMATTED_TIME}&a."
     given_self: "{PREFIX} &aYou recieved {FORMATTED_TIME}&a."

@@ -2,9 +2,11 @@ package com.moneybags.tempfly.user;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -48,8 +50,6 @@ public class FlightUser {
 	private BukkitTask
 	initialTask, enforceTask, damageProtection;
 	
-	private TempFlyTimer timer;
-	
 	private String
 	listName, tagName, particle;
 	
@@ -69,7 +69,7 @@ public class FlightUser {
 	
 	private double
 	selectedSpeed = -999;
-	
+
 	public FlightUser(Player p, FlightManager manager,
 			double time, String particle, boolean infinite, boolean bypass, boolean logged, boolean compatLogged,
 			double selectedSpeed) {
@@ -120,12 +120,6 @@ public class FlightUser {
 				// We want to save this value so tempfly doesnt break other plugins flight features.
 				Console.debug("--| Player is not compat flight logged");
 				enforce(1);
-				if (V.permaTimer && time > 0) {
-					if (timer != null) {
-						timer.cancel();
-					}
-					timer = new FlightTimer();
-				}
 			}
 			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, p.getUniqueId().toString()), false);
 			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, p.getUniqueId().toString()), false);
@@ -169,26 +163,16 @@ public class FlightUser {
 		double oldTime = this.time;
 		this.time = time;
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), time);
-		if ((timer instanceof FlightTimer) 
-				&& !hasInfiniteFlight()
-				&& p.isFlying()) {
+		if (!hasInfiniteFlight() && p.isFlying()) {
 			if (V.actionBar) {doActionBar();}
 		}
-		if (time > 0 && (hasAutoFlyQueued()) && !enabled) {
+		if (time > 0 && hasAutoFlyQueued() && !enabled) {
 			enableFlight();
 		} else if (time == 0) {
 			disableFlight(0, !V.damageTime);
 			autoEnable = true;
-			if (timer != null) {
-				timer.cancel();
-			}
 		} else if (oldTime == 0 && time > 0 && !enabled && V.autoFlyTimeReceived) {
 			enableFlight();
-		} else if (V.permaTimer) {
-			if (timer != null) {
-				timer.cancel();
-			}
-			timer = new FlightTimer();
 		}
 	}
 	
@@ -294,8 +278,8 @@ public class FlightUser {
 		save();
 		if (initialTask != null) {initialTask.cancel();}
 		if (enforceTask != null) {enforceTask.cancel();}
-		if (timer != null) {timer.cancel();}
 		removeDamageProtection();
+		clearSpeedPermCache();
 	}
 	
 	/**
@@ -349,11 +333,6 @@ public class FlightUser {
 		Console.debug("------ disable flight -------");
 		if (!enabled) {return;}
 		enabled = false;
-		//TODO 
-		if (timer != null && (!V.permaTimer || time <= 0)) {
-			timer.cancel();
-			timer = null;
-		}
 		GameMode m = p.getGameMode();
 		updateList(true);
 		updateName(true);
@@ -392,9 +371,6 @@ public class FlightUser {
 		p.setAllowFlight(true);
 		p.setFlying(!p.isOnGround());
 		applySpeedCorrect(true, 0);
-		if (timer == null) {
-			this.timer = new FlightTimer();	
-		}
 		return true;
 	}
 	
@@ -430,22 +406,23 @@ public class FlightUser {
 	}
 	
 	public boolean hasFlightRequirement(RequirementProvider requirement, InquiryType type) {
-		return requirements.getOrDefault(requirement, new HashMap<>()).containsKey(type);
+		Map<InquiryType, FlightResult> map = requirements.get(requirement);
+		return map != null && map.containsKey(type);
 	}
 	
 	public boolean hasFlightRequirements() {
-		return requirements.size() > 0;
+		return !requirements.isEmpty();
 	}
 	
 	public void submitFlightRequirement(RequirementProvider requirement, FlightResult failedResult) {
 		if (V.debug) {Console.debug("", "---- Submitting failed requirement to user (" + p.getName() + ") ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		Map<InquiryType, FlightResult> types = requirements.getOrDefault(requirement, new HashMap<>());
-		InquiryType type = failedResult.getInquiryType();
-		if (types.containsKey(type)) {
-			types.remove(type);
-		}
-		types.put(type, failedResult);
-		this.requirements.put(requirement, types);
+		requirements.compute(requirement, (k, types) -> {
+			if (types == null) {
+				types = new HashMap<>();
+			}
+			types.put(failedResult.getInquiryType(), failedResult);
+			return types;
+		});
 		if (enabled) {
 			autoEnable = true;
 		}
@@ -459,25 +436,21 @@ public class FlightUser {
 	 */
 	public boolean removeFlightRequirement(RequirementProvider requirement, InquiryType type) {
 		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		Map<InquiryType, FlightResult> types = requirements.getOrDefault(requirement, new HashMap<>());
-		types.remove(type);
-		if (types.size() == 0) {
-			this.requirements.remove(requirement);
-		} else {
-			this.requirements.put(requirement, types);
-		}
+		requirements.computeIfPresent(requirement, (k, types) -> {
+			types.remove(type);
+			return types.isEmpty() ? null : types;
+		});
 		return !hasFlightRequirements();
 	}
 	
 	/**
 	 * 
 	 * @param requirement
-	 * @param type
 	 * @return true if there are no more requirements
 	 */
 	public boolean removeFlightRequirement(RequirementProvider requirement) {
 		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		this.requirements.remove(requirement);
+		requirements.remove(requirement);
 		return !hasFlightRequirements();
 	}
 	
@@ -792,7 +765,7 @@ public class FlightUser {
 				|| (p.getFlySpeed() != val && !manager.getFlightEnvironment().allowSpeedPreference()) 
 				|| (p.getFlySpeed() < val && hasSpeedPreference())) {
 			Console.debug("--| Players speed needs to be changed.");
-			Bukkit.getScheduler().runTaskLater(manager.getTempFly(), () -> {
+			Runnable updateAction = () -> {
 				Console.debug("-----> | changing player speed");
 				if (p.isOnline()) {
 					Console.debug("player speed: " + p.getFlySpeed(), "value: " + val);
@@ -801,20 +774,30 @@ public class FlightUser {
 					if (p.getFlySpeed() > val && message) {
 						U.m(p, V.flySpeedLimitSelf.replaceAll("\\{SPEED}", new DecimalFormat("#.##").format(val * 10)));
 					}
-					p.setFlySpeed((float) val);
+					p.setFlySpeed(val);
 				}
-			}, delay);
+			};
+			if (delay <= 0 && Bukkit.isPrimaryThread()) {
+				updateAction.run();
+			} else {
+				Bukkit.getScheduler().runTaskLater(manager.getTempFly(), updateAction, Math.max(1, delay));
+			}
 			
 		} else if (p.getFlySpeed() != def && !hasSpeedPreference()) {
 			float fin = Math.min(def, val);
 			Console.debug("--| Players speed needs to be fixed it is stuck under default speed.");
-			Bukkit.getScheduler().runTaskLater(manager.getTempFly(), () -> {
+			Runnable defaultAction = () -> {
 				Console.debug("-----> | changing player speed");
 				if (p.isOnline()) {
 					Console.debug("player speed: " + p.getFlySpeed(), "value: " + val);
 					p.setFlySpeed(fin);
 				}
-			}, delay);
+			};
+			if (delay <= 0 && Bukkit.isPrimaryThread()) {
+				defaultAction.run();
+			} else {
+				Bukkit.getScheduler().runTaskLater(manager.getTempFly(), defaultAction, Math.max(1, delay));
+			}
 		}
 		return val;
 	}
@@ -862,243 +845,171 @@ public class FlightUser {
 		return permSpeed;
 	}
 	
-	private float calculatePermissionSpeed(String permission, String wildcard) {
-		Console.debug("calc perm speed : " + permission);
-		float maxBase = -999;
-		
-		float maxFound = 0;
-		for (PermissionAttachmentInfo info: p.getEffectivePermissions()) {
-			String perm = info.getPermission();
-			if (perm.startsWith("tempfly.speed." + permission)
-					|| perm.startsWith("tempfly.speed." + wildcard)) {
-				Console.debug("found: " + perm);
-				String[] split = perm.split("\\.");
-				if (split.length < 5) {
-					Console.debug("less than 5");
-					continue;
-				}
-				String num = split[4];
-				if (split.length > 5) {
-					num = num.concat("." + split[5]);
-				}
-				num = num.replaceAll("\\[", "").replaceAll("\\]", "");
-				Console.debug(num);
-				try {
-					float found = Float.parseFloat(num);
-					maxFound = Math.max(found, maxFound);
-				} catch (Exception e) {}
-			}
-		}
-		if (maxFound > 0) {
-			maxBase = maxFound;
-		}
-		Console.debug("maxbase: " + maxBase);
-		
-		return maxBase;
-	}
-	
-	
-	/**
-	 * 
-	 * --=---------=--
-	 *     Timers
-	 * --=---------=--
-	 * 
-	 */
-	
-	
-	public boolean hasTimer() {
-		return this.timer != null;
-	}
-	
-	public abstract class TempFlyTimer extends BukkitRunnable {
-		
-	}
-	
-	/**
-	 * Ground timer runs every tick when FlightTimer isnt scheduled and simply checks if the player is flying.
-	 * This way the FlightTimer will run as soon as the player starts flying. Otherwise it kinda looks laggy.
-	 * @author Kevin
-	 *
-	 */
-	public class GroundTimer extends TempFlyTimer {
-		
-		private static final int DELAY = 3;
-		
-		public GroundTimer() {
-			Console.debug("--- new ground timer ---");
-			this.runTaskTimer(manager.getTempFly(), 1, DELAY);
-		}
-		
-		@SuppressWarnings("deprecation")
-		@Override
-		public void run() {
-			idle += DELAY;
-			if (p.isFlying() || V.permaTimer || (V.groundTimer && p.isOnGround())) {
-				if (!V.idleTimer && isIdle()) {
-					return;
-				}
-				if (p.getGameMode() == GameMode.CREATIVE && !V.creativeTimer) {
-					return;
-				}
-				if (p.getGameMode() == GameMode.SPECTATOR && !V.spectatorTimer) {
-					return;
-				}
-				if (p.getVehicle() != null) {
-					return;
-				}
-				this.cancel();
-				timer = new FlightTimer();
-			}
-		}
-		
-	}
-	
-	/**
-	 * FlightTimer runs every 20 ticks and is in charge of decrementing time among other things such as
-	 * action bar messages.
-	 * @author Kevin
-	 *
-	 */
+	private final Map<String, Float> speedPermCache = new HashMap<>();
 
-	// It looks like were having spaghetti for dinner
-	public class FlightTimer extends TempFlyTimer {
+	public void clearSpeedPermCache() {
+		speedPermCache.clear();
+	}
+
+	float calculatePermissionSpeed(String permission, String wildcard) {
+		Float cached = speedPermCache.get(permission);
+		if (cached != null) {
+			return cached;
+		}
+		float speed = calculatePermissionSpeed(p != null ? p.getEffectivePermissions() : Collections.emptySet(), permission, wildcard);
+		speedPermCache.put(permission, speed);
+		return speed;
+	}
+
+	public static float calculatePermissionSpeed(Set<PermissionAttachmentInfo> permissions, String permission, String wildcard) {
+		String prefix1 = "tempfly.speed." + permission + ".";
+		String prefix2 = "tempfly.speed." + wildcard + ".";
+		float maxFound = 0;
+		if (permissions == null) {
+			return -999;
+		}
+		for (PermissionAttachmentInfo info : permissions) {
+			if (!info.getValue()) continue;
+			String perm = info.getPermission();
+			String rawNum = null;
+			if (perm.startsWith(prefix1)) {
+				rawNum = perm.substring(prefix1.length());
+			} else if (perm.startsWith(prefix2)) {
+				rawNum = perm.substring(prefix2.length());
+			}
+			if (rawNum != null && !rawNum.isEmpty()) {
+				rawNum = rawNum.replace("[", "").replace("]", "");
+				try {
+					float found = Float.parseFloat(rawNum);
+					maxFound = Math.max(found, maxFound);
+				} catch (NumberFormatException ignored) {}
+			}
+		}
+		return maxFound > 0 ? maxFound : -999;
+	}
+	
+	
+	/**
+	 * 
+	 * --=---------=--
+	 *     Ticking & Time Processing
+	 * --=---------=--
+	 * 
+	 */
+	
+	private boolean previouslyFlying;
+	private boolean messaged;
+
+	public boolean hasTimer() {
+		return doFlightTimer();
+	}
+
+	public void tick(int deltaTicks) {
+		if (p == null || !p.isValid()) {
+			return;
+		}
+		idle += deltaTicks;
+		doIdentifier();
 		
-		private static final int DELAY = 3;
+		if (hasInfiniteFlight()) {
+			return;
+		}
 		
-		private boolean previouslyFlying;
+		if (!doFlightTimer()) {
+			return;
+		}
 		
-		public FlightTimer() {
-			Console.debug("--- new flight timer--- ");
-			this.runTaskTimer(manager.getTempFly(), 0, DELAY);
-			if (doFlightTimer() && V.actionBar && !hasInfiniteFlight() && time > 0) {
+		accumulativeCycle += deltaTicks * 50L;
+		while (accumulativeCycle >= 1000L) {
+			accumulativeCycle -= 1000L;
+			executeTimer();
+		}
+	}
+
+	private void executeTimer() {
+		if (time > 0) {
+			double cost = 1;
+			for (RelativeTimeRegion rtr : environment.getRelativeTimeRegions()) {
+				cost *= rtr.getFactor();
+			}
+			time = time - cost;
+			if (time < 0) time = 0;
+			
+			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), time);	
+			
+			if (V.warningTimes.contains((long) time)) {
+				p.sendTitle(timeManager.regexString(V.warningTitle, time),
+					timeManager.regexString(V.warningSubtitle, time), 15, 30, 15);
+			}
+			if (V.actionBar) {
 				doActionBar();
 			}
-		}
-		
-		@Override
-		public void run() {
-			idle += DELAY;
-			// Update the players identifiers each tick as it isn't resource heavy it looks good.
-			doIdentifier();
-			// This line fixed an unknown confliction with another plugin on some guys server so i'l just leave it.
-			//if (enabled) {p.setAllowFlight(true);}
 			
-			if (hasInfiniteFlight()) {
-				return;
-			}
-			
-			if (!doFlightTimer()) {
-				this.cancel();
-				timer = time > 0 ? new GroundTimer() : null;
-				return;
-			}
-			
-			accumulativeCycle += DELAY * 50;
-			if (accumulativeCycle >= 1000) {
-				accumulativeCycle = 0;
-				executeTimer();
-				return;
-			}
-			
-		}
-		
-		@Override
-		public void cancel() {
-			super.cancel();
-		}
-		
-		private void executeTimer() {
-			if (time > 0) {
-				
-				double cost = 1;
-				for (RelativeTimeRegion rtr : environment.getRelativeTimeRegions()) {
-					cost *= rtr.getFactor();
-				}
-				time = time-cost;
-				if (time < 0) time = 0;
-				
-				manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), time);	
-				
-				if (V.warningTimes.contains((long)time)) {
-					p.sendTitle(timeManager.regexString(V.warningTitle, time),
-						timeManager.regexString(V.warningSubtitle, time), 15, 30, 15);
-				}
-				if (V.actionBar) {doActionBar();}
-				
-				if (time == 0) {
-					timeExpired();
-				}
-			} else if (enabled) {
+			if (time == 0) {
 				timeExpired();
 			}
+		} else if (enabled) {
+			timeExpired();
 		}
-		
-		private void timeExpired() {
-			disableFlight(-1, !V.damageTime);
-			U.m(p, V.invalidTimeSelf);
-			autoEnable = true;
+	}
+
+	private void timeExpired() {
+		disableFlight(-1, !V.damageTime);
+		U.m(p, V.invalidTimeSelf);
+		autoEnable = true;
+	}
+
+	private boolean doFlightTimer() {
+		if (time <= 0) {
+			return false;
 		}
-		
-		private boolean doFlightTimer() {
-			if (time <= 0) {
-				return false;
-			}
-			if (V.permaTimer) {
-				return doIdleCheck();
-			}
-			if (p.getGameMode() == GameMode.CREATIVE && !V.creativeTimer) {
-				return false;
-			}
-			if (p.getGameMode() == GameMode.SPECTATOR && !V.spectatorTimer) {
-				return false;
-			}
-			if (p.getVehicle() != null) {
-				return false;
-			}
-			if (!p.isFlying()) {
-				if (V.groundTimer && !doIdleCheck()) {
-					return false;
-				}
-				return V.groundTimer;
-			}
+		if (V.permaTimer) {
 			return doIdleCheck();
 		}
-		
-		private void doIdentifier() {
-			if (!enabled) {
-				return;
-			}
-			if (previouslyFlying && !p.isFlying() || !previouslyFlying && p.isFlying()) {
-				updateList(!p.isFlying());
-				updateName(!p.isFlying());	
-			}
-			previouslyFlying = p.isFlying();
+		if (p.getGameMode() == GameMode.CREATIVE && !V.creativeTimer) {
+			return false;
 		}
-		
-		/**
-		 * 
-		 * @return True if the timer should continue, false if it can switch to ground timer.
-		 */
-		private boolean messaged = false;
-		
-		private boolean doIdleCheck() {
-			if (isIdle()) {
-				if (V.idleDrop) {
-					disableFlight(0, !V.damageIdle);
-				}
-				
-				if (!this.messaged) {
-					U.m(p, V.idleDrop ? V.disabledIdle : V.consideredIdle);
-					this.messaged = true;
-				}
-				return V.idleTimer;
-			} else {
-				this.messaged = false;
+		if (p.getGameMode() == GameMode.SPECTATOR && !V.spectatorTimer) {
+			return false;
+		}
+		if (p.getVehicle() != null) {
+			return false;
+		}
+		if (!p.isFlying()) {
+			if (V.groundTimer && !doIdleCheck()) {
+				return false;
+			}
+			return V.groundTimer;
+		}
+		return doIdleCheck();
+	}
+
+	private void doIdentifier() {
+		if (!enabled) {
+			return;
+		}
+		if ((previouslyFlying && !p.isFlying()) || (!previouslyFlying && p.isFlying())) {
+			updateList(!p.isFlying());
+			updateName(!p.isFlying());	
+		}
+		previouslyFlying = p.isFlying();
+	}
+
+	private boolean doIdleCheck() {
+		if (isIdle()) {
+			if (V.idleDrop) {
+				disableFlight(0, !V.damageIdle);
 			}
 			
-			return true;
+			if (!this.messaged) {
+				U.m(p, V.idleDrop ? V.disabledIdle : V.consideredIdle);
+				this.messaged = true;
+			}
+			return V.idleTimer;
+		} else {
+			this.messaged = false;
 		}
 		
+		return true;
 	}
 }

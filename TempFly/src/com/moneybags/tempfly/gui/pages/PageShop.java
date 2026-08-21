@@ -119,12 +119,21 @@ public class PageShop extends DynamicPage {
 				return;
 			}
 			Economy eco = tempfly.getHookManager().getEconomy();
+			if (eco == null) {
+				U.m(p, V.invalidEconomy);
+				return;
+			}
 			double balance = eco.getBalance(p);
 			if (option.getCost() > balance) {
 				U.m(p, manager.regexString(V.invalidFunds, option.getTime())
 						.replaceAll("\\{COST}", String.valueOf(option.getCost())));
 			} else {
-				eco.withdrawPlayer(p, option.getCost());
+				net.milkbowl.vault.economy.EconomyResponse resp = eco.withdrawPlayer(p, option.getCost());
+				if (!resp.transactionSuccess()) {
+					U.m(p, manager.regexString(V.invalidFunds, option.getTime())
+							.replaceAll("\\{COST}", String.valueOf(option.getCost())));
+					return;
+				}
 				U.m(p, manager.regexString(V.timePurchased, option.getTime())
 						.replaceAll("\\{COST}", String.valueOf(option.getCost())));
 				new AsyncTimeParameters(tempfly, (AsyncTimeParameters parameters) -> {

@@ -32,6 +32,11 @@ public class CmdTrails extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.trails");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		return new ArrayList<>();
 	}

@@ -2,8 +2,10 @@ package com.moneybags.tempfly.user;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.bukkit.entity.Player;
 
@@ -14,15 +16,32 @@ import com.moneybags.tempfly.util.Console;
 
 public class UserEnvironment {
 
+	private static final CompatRegion[] EMPTY_REGIONS = new CompatRegion[0];
+	private static final RelativeTimeRegion[] EMPTY_RT_REGIONS = new RelativeTimeRegion[0];
+
 	private final FlightUser user;
 	private final FlightEnvironment environment;
 	
 	private boolean freeFlight;
 	
-	private final List<CompatRegion> encompassing = new LinkedList<>();
+	private final Set<CompatRegion> encompassing = new LinkedHashSet<>();
 	
 	private final List<RelativeTimeRegion> rtRegions = new ArrayList<>();
 	private RelativeTimeRegion rtWorld;
+	private RelativeTimeRegion[] cachedRtArray = EMPTY_RT_REGIONS;
+
+	public UserEnvironment(FlightUser user, FlightEnvironment environment, CompatRegion[] initialRegions) {
+		this.user = user;
+		this.environment = environment;
+		if (initialRegions != null) {
+			encompassing.addAll(Arrays.asList(initialRegions));
+		}
+		if (environment != null) {
+			asessRtRegions();
+			asessRtWorld();
+			asessInfiniteFlight();
+		}
+	}
 	
 	public UserEnvironment(FlightUser user, Player p) {
 		Console.debug("--| Loading user environment...");
@@ -32,7 +51,7 @@ public class UserEnvironment {
 		encompassing.addAll(Arrays.asList(
 				user.getFlightManager().getTempFly().getHookManager().hasRegionProvider()
 				? user.getFlightManager().getTempFly().getHookManager().getRegionProvider().getApplicableRegions(user.getPlayer().getLocation())
-				: new CompatRegion[0]));
+				: EMPTY_REGIONS));
 		
 		StringBuilder builder = new StringBuilder();
 		encompassing.stream().forEach(rg -> builder.append(rg.getId() + ", "));
@@ -58,23 +77,20 @@ public class UserEnvironment {
 	
 	
 	public CompatRegion[] getCurrentRegionSet() {
-		return encompassing == null ? null : encompassing.toArray(new CompatRegion[encompassing.size()]);
+		return encompassing.toArray(EMPTY_REGIONS);
 	}
 	
 	public void updateCurrentRegionSet(CompatRegion[] regions) {
 		this.encompassing.clear();
-		this.encompassing.addAll(Arrays.asList(regions));
+		if (regions != null) {
+			this.encompassing.addAll(Arrays.asList(regions));
+		}
 		asessRtRegions();
 		asessInfiniteFlight();
 	}
 	
 	public boolean isInside(CompatRegion region) {
-		for (CompatRegion inside: encompassing) {
-			if (inside.equals(region)) {
-				return true;
-			}
-		}
-		return false;
+		return region != null && encompassing.contains(region);
 	}
 	
 	
@@ -88,37 +104,62 @@ public class UserEnvironment {
 	
 	
 	public RelativeTimeRegion[] getRelativeTimeRegions() {
-		List<RelativeTimeRegion> list = new LinkedList<>();
-		list.addAll(rtRegions);
-		if (rtWorld != null) list.add(rtWorld);
-		return list.toArray(new RelativeTimeRegion[list.size()]);
+		return cachedRtArray;
+	}
+
+	private void rebuildRtRegionsCache() {
+		if (rtWorld == null) {
+			cachedRtArray = rtRegions.toArray(EMPTY_RT_REGIONS);
+			return;
+		}
+		RelativeTimeRegion[] array = new RelativeTimeRegion[rtRegions.size() + 1];
+		for (int i = 0; i < rtRegions.size(); i++) {
+			array[i] = rtRegions.get(i);
+		}
+		array[rtRegions.size()] = rtWorld;
+		cachedRtArray = array;
 	}
 
 	public void asessRtWorld() {
-		rtWorld = environment.getRelativeTime(user.getPlayer().getWorld());
+		if (environment != null && user != null && user.getPlayer() != null) {
+			rtWorld = environment.getRelativeTime(user.getPlayer().getWorld());
+		} else {
+			rtWorld = null;
+		}
+		rebuildRtRegionsCache();
 	}
 	
 	public void asessRtRegions() {
-		RelativeTimeRegion[] rtArray = user.getFlightManager().getFlightEnvironment().getRelativeTimeRegions();
-		if (rtArray.length == 0) {
+		if (environment == null) {
+			rtRegions.clear();
+			rebuildRtRegionsCache();
 			return;
 		}
-		List<String> regions = new ArrayList<>();
-		for(CompatRegion r : encompassing) {
-			regions.add(r.getId());
+		RelativeTimeRegion[] rtArray = environment.getRelativeTimeRegions();
+		if (rtArray == null || rtArray.length == 0 || encompassing.isEmpty()) {
+			rtRegions.clear();
+			rebuildRtRegionsCache();
+			return;
 		}
+		Set<String> regionIds = new HashSet<>(encompassing.size());
+		for (CompatRegion r : encompassing) {
+			regionIds.add(r.getId());
+		}
+		rtRegions.clear();
 		for (RelativeTimeRegion rt : rtArray) {
-			String rtName = rt.getName();
-			if ((regions.contains(rtName)) && !(rtRegions.contains(rt))) {
+			if (regionIds.contains(rt.getName())) {
 				rtRegions.add(rt);
-			} else if (!(regions.contains(rtName)) && (rtRegions.contains(rt))) {
-				rtRegions.remove(rt);	
 			}
 		}
+		rebuildRtRegionsCache();
 	}
 	
 	public void asessInfiniteFlight() {
-		if (environment.isInfinite(user.getPlayer().getWorld())) {
+		if (environment == null) {
+			freeFlight = false;
+			return;
+		}
+		if (user != null && user.getPlayer() != null && environment.isInfinite(user.getPlayer().getWorld())) {
 			freeFlight = true;
 			return;
 		}
@@ -142,18 +183,10 @@ public class UserEnvironment {
 	 * @return True if the list is the same.
 	 */
 	public boolean checkIdenticalRegions(List<CompatRegion> regions) {
-		if (regions.size() != encompassing.size()) {
+		if (regions == null || regions.size() != encompassing.size()) {
 			return false;
 		}
-		check:
-		for (CompatRegion check: regions) {
-			for (CompatRegion current: encompassing) {
-				if (current.equals(check)) {
-					continue check;
-				}
-			}
-			return false;
-		}
-		return true;
+		return encompassing.containsAll(regions);
 	}
 }
+

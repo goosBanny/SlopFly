@@ -54,7 +54,11 @@ public class FlightManager implements Listener, Reloadable {
 	//private StructureProximity structures;
 	private final CombatHandler combat;
 
-	private final List<RequirementProvider> providers = new LinkedList<>();
+	private final List<RequirementProvider> providers = new java.util.concurrent.CopyOnWriteArrayList<>();
+	private org.bukkit.scheduler.BukkitTask flightTickTask;
+	private org.bukkit.scheduler.BukkitTask movementTask;
+	private final Map<UUID, Location> lastPlayerLocations = new java.util.concurrent.ConcurrentHashMap<>();
+	private int sweepTick = 0;
 
 	public FlightManager(final TempFly tempfly) {
 		this.tempfly = tempfly;
@@ -66,7 +70,93 @@ public class FlightManager implements Listener, Reloadable {
 		//}
 
 		tempfly.getServer().getPluginManager().registerEvents(this, tempfly);
-	}// /tf give 1m
+		startTickTask();
+		startMovementTask();
+	}
+
+	public void startTickTask() {
+		if (flightTickTask != null) {
+			flightTickTask.cancel();
+		}
+		flightTickTask = Bukkit.getScheduler().runTaskTimer(tempfly, () -> {
+			for (FlightUser user : users.values()) {
+				try {
+					user.tick(3);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}, 1L, 3L);
+	}
+
+	public void startMovementTask() {
+		stopMovementTask();
+		if (!V.isMovementTaskMode()) {
+			return;
+		}
+		int interval = Math.max(1, V.movementTaskInterval);
+		int sweepEvery = Math.max(1, Math.round(20f / (float) interval));
+
+		movementTask = Bukkit.getScheduler().runTaskTimer(tempfly, () -> {
+			sweepTick++;
+			boolean sweep = sweepTick >= sweepEvery;
+			if (sweep) {
+				sweepTick = 0;
+			}
+
+			for (FlightUser user : users.values()) {
+				Player p = user.getPlayer();
+				if (p == null || !p.isOnline()) {
+					continue;
+				}
+
+				Location current = p.getLocation();
+				UUID uuid = p.getUniqueId();
+				Location last = lastPlayerLocations.get(uuid);
+
+				boolean sameBlock = last != null
+						&& last.getWorld() != null
+						&& last.getWorld().equals(current.getWorld())
+						&& last.getBlockX() == current.getBlockX()
+						&& last.getBlockY() == current.getBlockY()
+						&& last.getBlockZ() == current.getBlockZ();
+
+				if (sameBlock) {
+					if (sweep) {
+						user.evaluateFlightRequirements(current, true);
+						notifyTerritoryHooks(p, current);
+					}
+					continue;
+				}
+
+				Location from = last != null ? last : current;
+				user.resetIdleTimer();
+				updateLocation(user, from, current, false, false);
+				notifyTerritoryHooks(p, current);
+				lastPlayerLocations.put(uuid, current.clone());
+			}
+		}, interval, interval);
+	}
+
+	public void stopMovementTask() {
+		if (movementTask != null) {
+			movementTask.cancel();
+			movementTask = null;
+		}
+		lastPlayerLocations.clear();
+		sweepTick = 0;
+	}
+
+	public void notifyTerritoryHooks(Player p, Location loc) {
+		for (RequirementProvider provider : providers) {
+			if (provider instanceof TerritoryHook) {
+				TerritoryHook hook = (TerritoryHook) provider;
+				if (hook.isEnabled()) {
+					hook.updateLocation(p, loc);
+				}
+			}
+		}
+	}
 
 	public TempFly getTempFly() {
 		return tempfly;
@@ -88,6 +178,8 @@ public class FlightManager implements Listener, Reloadable {
 
 	@Override
 	public void onTempflyReload() {
+		startTickTask();
+		startMovementTask();
 		for (RequirementProvider provider : providers) {
 			if (provider instanceof TempFlyHook) {
 				continue;
@@ -95,7 +187,7 @@ public class FlightManager implements Listener, Reloadable {
 			provider.onTempflyReload();
 		}
 
-		for (FlightUser user : getUsers()) {
+		for (FlightUser user : users.values()) {
 			user.evaluateFlightRequirements(user.getPlayer().getLocation(), user.hasFlightEnabled());
 			user.applySpeedCorrect(true, 0);
 		}
@@ -108,39 +200,59 @@ public class FlightManager implements Listener, Reloadable {
 	 * 
 	 */
 
-	private final Map<UUID, FlightUser> users = new HashMap<>();
-	private final Map<UUID, UserLoader> loaders = new HashMap<>();
+	private final Map<UUID, FlightUser> users = new java.util.concurrent.ConcurrentHashMap<>();
+	private final Map<UUID, UserLoader> loaders = new java.util.concurrent.ConcurrentHashMap<>();
 
-	public synchronized boolean hasUser(Player p) {
-		return ((p != null) && users.containsKey(p.getUniqueId()))
-				|| ((p != null) && loaders.containsKey(p.getUniqueId()) && loaders.get(p.getUniqueId()).isReady());
+	public boolean hasUser(Player p) {
+		if (p == null) return false;
+		UUID u = p.getUniqueId();
+		return users.containsKey(u) || (loaders.containsKey(u) && loaders.get(u).isReady());
 	}
 
-	public synchronized FlightUser getUser(UUID u) {
-		if (!users.containsKey(u) && loaders.containsKey(u) && loaders.get(u).isReady()) {
-			UserLoader loader = loaders.get(u);
-			loaders.remove(u);
-			users.put(u, loader.buildUser());
+	public FlightUser getUser(UUID u) {
+		if (u == null) return null;
+		FlightUser user = users.get(u);
+		if (user != null) {
+			return user;
 		}
-		return users.containsKey(u) ? users.get(u) : null;
+		UserLoader loader = loaders.get(u);
+		if (loader != null && loader.isReady()) {
+			loaders.remove(u);
+			user = loader.buildUser();
+			users.put(u, user);
+			return user;
+		}
+		return null;
 	}
 
-	public synchronized FlightUser getUser(Player p) {
+	public FlightUser getUser(Player p) {
 		if (p == null) {
 			return null;
 		}
 
 		UUID u = p.getUniqueId();
-		if (!users.containsKey(u) && loaders.containsKey(u) && loaders.get(u).isReady()) {
-			UserLoader loader = loaders.get(u);
-			loaders.remove(u);
-			users.put(u, loader.buildUser(p));
+		FlightUser user = users.get(u);
+		if (user != null) {
+			return user;
 		}
-		return users.containsKey(u) ? users.get(u) : null;
+		UserLoader loader = loaders.get(u);
+		if (loader != null && loader.isReady()) {
+			loaders.remove(u);
+			user = loader.buildUser(p);
+			users.put(u, user);
+			return user;
+		}
+		return null;
 	}
 
-	public synchronized FlightUser[] getUsers() {
-		return users.values().toArray(new FlightUser[users.size()]);
+	private static final FlightUser[] EMPTY_USERS_ARRAY = new FlightUser[0];
+
+	public java.util.Collection<FlightUser> getUserValues() {
+		return users.values();
+	}
+
+	public FlightUser[] getUsers() {
+		return users.values().toArray(EMPTY_USERS_ARRAY);
 	}
 
 	/**
@@ -148,7 +260,7 @@ public class FlightManager implements Listener, Reloadable {
 	 * 
 	 * @param u
 	 */
-	public synchronized void addUser(UUID u, boolean async) {
+	public void addUser(UUID u, boolean async) {
 		Console.debug("------Add User UUID------");
 		if (!users.containsKey(u) && !loaders.containsKey(u)) {
 			Console.debug("--| Starting to load player data...");
@@ -162,10 +274,13 @@ public class FlightManager implements Listener, Reloadable {
 		}
 	}
 
-	public synchronized void addUser(Player p) {
+	public void addUser(Player p) {
 		Console.debug("------Add User Player------");
+		if (p == null) {
+			return;
+		}
 		UUID u = p.getUniqueId();
-		if (p != null && users.containsKey(p.getUniqueId())) {
+		if (users.containsKey(u)) {
 			Console.debug("--|> User is already registered!");
 			return;
 		}
@@ -180,8 +295,10 @@ public class FlightManager implements Listener, Reloadable {
 		if (!p.isOnline()) {
 			Console.debug("--| Player is no longer online...");
 			if (users.containsKey(u)) {
-				users.get(u).onQuit(false);
-				users.remove(u);
+				FlightUser removed = users.remove(u);
+				if (removed != null) {
+					removed.onQuit(false);
+				}
 			}
 			return;
 		}
@@ -201,25 +318,29 @@ public class FlightManager implements Listener, Reloadable {
 		}
 	}
 
-	public synchronized void removeUser(Player p, boolean reload) {
+	public void removeUser(Player p, boolean reload) {
 		removeUser(p.getUniqueId(), reload);
 	}
 
-	public synchronized void removeUser(UUID u, boolean reload) {
-		if (users.containsKey(u)) {
-			users.get(u).onQuit(reload);
-			users.remove(u);
+	public void removeUser(UUID u, boolean reload) {
+		lastPlayerLocations.remove(u);
+		FlightUser removed = users.remove(u);
+		if (removed != null) {
+			removed.onQuit(reload);
 		}
-		if (loaders.containsKey(u)) {
-			loaders.remove(u);
-		}
+		loaders.remove(u);
 	}
 
 	/**
 	 * Called on plugin disable, saves users and cleans up.
 	 */
 	public void onDisable() {
-		for (FlightUser user : getUsers()) {
+		if (flightTickTask != null) {
+			flightTickTask.cancel();
+			flightTickTask = null;
+		}
+		stopMovementTask();
+		for (FlightUser user : users.values()) {
 			removeUser(user.getPlayer(), true);
 		}
 	}
@@ -247,7 +368,7 @@ public class FlightManager implements Listener, Reloadable {
 			throw new IllegalArgumentException("A requirement provider can only be registered once!");
 		}
 		providers.add(provider);
-		for (FlightUser user : getUsers()) {
+		for (FlightUser user : users.values()) {
 			user.evaluateFlightRequirement(provider, user.getPlayer().getLocation());
 		}
 	}
@@ -261,7 +382,7 @@ public class FlightManager implements Listener, Reloadable {
 	 */
 	public void unregisterRequirementProvider(RequirementProvider provider) {
 		if (providers.remove(provider)) {
-			for (FlightUser user : getUsers()) {
+			for (FlightUser user : users.values()) {
 				if (user.removeFlightRequirement(provider)) {
 					user.updateRequirements(V.requirePassDefault);
 				}
@@ -274,37 +395,43 @@ public class FlightManager implements Listener, Reloadable {
 	 * 
 	 * @param user
 	 * @param regions
-	 * @param invokeHooks
 	 * @return
 	 */
 	public List<FlightResult> inquireFlight(FlightUser user, CompatRegion[] regions) {
-		List<FlightResult> results = new ArrayList<>();
+		List<FlightResult> results = new ArrayList<>(providers.size());
+		inquireFlight(user, regions, results);
+		return results;
+	}
+
+	public void inquireFlight(FlightUser user, CompatRegion[] regions, List<FlightResult> target) {
 		for (RequirementProvider requirement : providers) {
 			if (requirement.handles(InquiryType.REGION)) {
 				continue;
 			}
-			results.add(requirement.handleFlightInquiry(user, regions));
+			target.add(requirement.handleFlightInquiry(user, regions));
 		}
-		return results;
 	}
 
 	/**
 	 * Check if a player can fly in a single region.
 	 * 
 	 * @param user
-	 * @param r
-	 * @param invokeHooks
+	 * @param region
 	 * @return
 	 */
 	public List<FlightResult> inquireFlight(FlightUser user, CompatRegion region) {
-		List<FlightResult> results = new ArrayList<>();
+		List<FlightResult> results = new ArrayList<>(providers.size());
+		inquireFlight(user, region, results);
+		return results;
+	}
+
+	public void inquireFlight(FlightUser user, CompatRegion region, List<FlightResult> target) {
 		for (RequirementProvider requirement : providers) {
 			if (requirement.handles(InquiryType.REGION)) {
 				continue;
 			}
-			results.add(requirement.handleFlightInquiry(user, region));
+			target.add(requirement.handleFlightInquiry(user, region));
 		}
-		return results;
 	}
 
 	/**
@@ -312,47 +439,56 @@ public class FlightManager implements Listener, Reloadable {
 	 * 
 	 * @param user
 	 * @param world
-	 * @param invokeHooks
 	 * @return
 	 */
 	public List<FlightResult> inquireFlight(FlightUser user, World world) {
-		List<FlightResult> results = new ArrayList<>();
+		List<FlightResult> results = new ArrayList<>(providers.size());
+		inquireFlight(user, world, results);
+		return results;
+	}
+
+	public void inquireFlight(FlightUser user, World world, List<FlightResult> target) {
 		for (RequirementProvider requirement : providers) {
 			if (requirement.handles(InquiryType.WORLD)) {
 				continue;
 			}
-			results.add(requirement.handleFlightInquiry(user, world));
+			target.add(requirement.handleFlightInquiry(user, world));
 		}
-		return results;
 	}
 
 	/**
 	 * Check if a player can fly at a given location and process all requirements
-	 * for said location. Does not check regions and worlds, you need to use the
-	 * specified methods for regions and worlds.
+	 * for said location.
 	 * 
 	 * @param user
 	 * @param loc
-	 * @param invokeHooks
 	 * @return
 	 */
 	public List<FlightResult> inquireFlight(FlightUser user, Location loc) {
-		List<FlightResult> results = new ArrayList<>();
+		List<FlightResult> results = new ArrayList<>(providers.size());
+		inquireFlight(user, loc, results);
+		return results;
+	}
+
+	public void inquireFlight(FlightUser user, Location loc, List<FlightResult> target) {
 		for (RequirementProvider requirement : providers) {
 			if (requirement.handles(InquiryType.LOCATION)) {
 				continue;
 			}
-			results.add(requirement.handleFlightInquiry(user, loc));
+			target.add(requirement.handleFlightInquiry(user, loc));
 		}
-		return results;
 	}
 	
 	public List<FlightResult> inquireFlightBeyondScope(FlightUser user) {
-		List<FlightResult> results = new ArrayList<>();
-		for (RequirementProvider requirement : providers) {
-			results.add(requirement.handleFlightInquiry(user));
-		}
+		List<FlightResult> results = new ArrayList<>(providers.size());
+		inquireFlightBeyondScope(user, results);
 		return results;
+	}
+
+	public void inquireFlightBeyondScope(FlightUser user, List<FlightResult> target) {
+		for (RequirementProvider requirement : providers) {
+			target.add(requirement.handleFlightInquiry(user));
+		}
 	}
 
 	/**
@@ -402,16 +538,16 @@ public class FlightManager implements Listener, Reloadable {
 			}
 		}
 		
-		final List<FlightResult> results = new ArrayList<>();
+		final List<FlightResult> results = new ArrayList<>(providers.size() * 2);
 
 		if (getTempFly().getHookManager().hasRegionProvider()) {
-			List<CompatRegion> regions = Arrays
-					.asList(getTempFly().getHookManager().getRegionProvider().getApplicableRegions(to));
+			CompatRegion[] applicable = getTempFly().getHookManager().getRegionProvider().getApplicableRegions(to);
+			List<CompatRegion> regions = Arrays.asList(applicable);
 			if (forceRegion || !user.getEnvironment().checkIdenticalRegions(regions)) {
 				// Process regions
-				results.addAll(inquireFlight(user, regions.toArray(new CompatRegion[regions.size()])));
+				inquireFlight(user, applicable, results);
 				// Update the users current regions.
-				user.getEnvironment().updateCurrentRegionSet(regions.toArray(new CompatRegion[regions.size()]));
+				user.getEnvironment().updateCurrentRegionSet(applicable);
 				
 				if (user.hasFlightEnabled()) {
 					user.applySpeedCorrect(true, 0);	
@@ -422,7 +558,7 @@ public class FlightManager implements Listener, Reloadable {
 		// Check flight requirements if player entered a new world.
 		// Process world
 		if (!from.getWorld().equals(to.getWorld()) || forceWorld) {
-			results.addAll((inquireFlight(user, to.getWorld())));
+			inquireFlight(user, to.getWorld(), results);
 			user.getEnvironment().asessRtWorld();
 			user.getEnvironment().asessInfiniteFlight();
 		}
@@ -430,7 +566,7 @@ public class FlightManager implements Listener, Reloadable {
 		// no hooks are enabled.
 		// Used mainly for things like islands in skyblock, faction land, etc...
 		// Process location
-		results.addAll(inquireFlight(user, user.getPlayer().getLocation()));
+		inquireFlight(user, user.getPlayer().getLocation(), results);
 
 		// Submit the flight results and see if auto fly can be enabled.
 		user.submitFlightResults(results, user.hasFlightEnabled());
@@ -450,8 +586,13 @@ public class FlightManager implements Listener, Reloadable {
 			return;
 		}
 		user.resetIdleTimer();
-		if (!e.getFrom().getBlock().equals(e.getTo().getBlock())) {
-			updateLocation(user, e.getFrom(), e.getTo(), false, false);
+		Location from = e.getFrom();
+		Location to = e.getTo();
+		if (to != null) {
+			lastPlayerLocations.put(e.getPlayer().getUniqueId(), to.clone());
+		}
+		if (to != null && (from.getBlockX() != to.getBlockX() || from.getBlockY() != to.getBlockY() || from.getBlockZ() != to.getBlockZ() || !from.getWorld().equals(to.getWorld()))) {
+			updateLocation(user, from, to, false, false);
 		}
 		user.applyFlightCorrect();
 	}
@@ -469,6 +610,7 @@ public class FlightManager implements Listener, Reloadable {
 			return;
 		}
 		user.resetIdleTimer();
+		lastPlayerLocations.put(e.getPlayer().getUniqueId(), e.getRespawnLocation().clone());
 		updateLocation(user, e.getPlayer().getLocation(), e.getRespawnLocation(), false, false);
 		// If the user has flight enabled, we need to correct their speed so it doesnt
 		// reset to 1.
@@ -492,6 +634,7 @@ public class FlightManager implements Listener, Reloadable {
 			return;
 		}
 		user.resetIdleTimer();
+		lastPlayerLocations.put(e.getPlayer().getUniqueId(), user.getPlayer().getLocation().clone());
 		// The from coordinate really doesn't matter here, just the world.
 		updateLocation(user, new Location(e.getFrom(), 0, 0, 0), user.getPlayer().getLocation(), true, false);
 		// If the user has flight enabled, we need to correct their speed so it doesnt
@@ -588,7 +731,6 @@ public class FlightManager implements Listener, Reloadable {
 	public void onAsyncPreLoginMonitor(AsyncPlayerPreLoginEvent e) {
 		UUID u = e.getUniqueId();
 		if (e.getLoginResult() != Result.ALLOWED) {
-			users.get(u);
 			removeUser(u, false);
 		}
 	}
@@ -601,13 +743,18 @@ public class FlightManager implements Listener, Reloadable {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onMove(PlayerMoveEvent e) {
-		if (!e.getFrom().getBlock().equals(e.getTo().getBlock())) {
+		if (V.isMovementTaskMode()) {
+			return;
+		}
+		Location from = e.getFrom();
+		Location to = e.getTo();
+		if (to != null && (from.getBlockX() != to.getBlockX() || from.getBlockY() != to.getBlockY() || from.getBlockZ() != to.getBlockZ() || !from.getWorld().equals(to.getWorld()))) {
 			FlightUser user = getUser(e.getPlayer());
 			if (user == null) {
 				return;
 			}
 			user.resetIdleTimer();
-			updateLocation(user, e.getFrom(), e.getTo(), false, false);
+			updateLocation(user, from, to, false, false);
 		}
 	}
 
@@ -622,11 +769,10 @@ public class FlightManager implements Listener, Reloadable {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
 	public void onAsyncChat(AsyncPlayerChatEvent e) {
-		FlightUser user = getUser(e.getPlayer());
-		if (user == null) {
-			return;
+		FlightUser user = users.get(e.getPlayer().getUniqueId());
+		if (user != null) {
+			user.resetIdleTimer();
 		}
-		user.resetIdleTimer();
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)

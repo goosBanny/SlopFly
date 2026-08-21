@@ -27,6 +27,11 @@ public class CmdReload extends TempFlyCommand {
 	}
 	
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.reload");
+	}
+	
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		return new ArrayList<>();
 	}

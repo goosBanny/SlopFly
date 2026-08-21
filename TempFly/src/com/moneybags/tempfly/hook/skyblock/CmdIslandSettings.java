@@ -30,9 +30,13 @@ public class CmdIslandSettings extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.skyblock.island.settings");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
-		// TODO Auto-generated method stub
-		return null;
+		return new java.util.ArrayList<>();
 	}
 	
 }

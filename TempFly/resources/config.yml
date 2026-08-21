@@ -60,6 +60,14 @@ system:
     user: "user"
     pass: "pass"
 
+movement:
+  # Movement detection mode: TASK or EVENT
+  # TASK: Polls player movement on a scheduled task (highly efficient, scales predictably with player count).
+  # EVENT: Listens to Bukkit PlayerMoveEvent (fires continuously per player).
+  mode: TASK
+  # The interval in ticks between movement checks when using TASK mode (default: 4 ticks)
+  task-interval-ticks: 4
+
 general:
   # This feature prevents conflictions with other plugins fly features.
   # By default tempfly will steal priority and take the command /fly away from other plugins.

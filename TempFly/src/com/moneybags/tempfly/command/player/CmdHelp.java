@@ -33,6 +33,11 @@ public class CmdHelp extends TempFlyCommand {
 	}
 
 	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.help") || U.hasPermission(s, "tempfly.help.admin");
+	}
+
+	@Override
 	public List<String> getPotentialArguments(CommandSender s) {
 		return new ArrayList<>();
 	}

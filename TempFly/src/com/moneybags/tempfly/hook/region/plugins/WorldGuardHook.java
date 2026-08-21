@@ -120,8 +120,12 @@ public class WorldGuardHook implements RegionProvider {
     
     @Override
     public CompatRegion[] getApplicableRegions(Location loc) {
+    	ApplicableRegionSet set = getRegionSet(loc);
+    	if (set == null) {
+    		return new CompatRegion[0];
+    	}
     	List<CompatRegion> list = new ArrayList<>();
-    	for (ProtectedRegion r: getRegionSet(loc)) {
+    	for (ProtectedRegion r: set) {
     		list.add(new CompatRegion(r.getId()));
     	}
     	return list.toArray(new CompatRegion[list.size()]);

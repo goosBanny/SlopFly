@@ -1,8 +1,10 @@
 package com.moneybags.tempfly.combat;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
@@ -14,6 +16,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.scheduler.BukkitTask;
 import com.moneybags.tempfly.fly.FlightManager;
 import com.moneybags.tempfly.fly.RequirementProvider;
 import com.moneybags.tempfly.fly.result.FlightResult.DenyReason;
@@ -26,12 +29,42 @@ import com.moneybags.tempfly.util.V;
 public class CombatHandler implements RequirementProvider, Listener {
 
 	private FlightManager manager;
+	private BukkitTask tickTask;
 	
-	private Map<UUID, CombatTag> tags = new HashMap<>();
+	private final Map<UUID, CombatTag> tags = new ConcurrentHashMap<>();
 	
 	public CombatHandler(FlightManager manager) {
 		this.manager = manager;
 		manager.getTempFly().getServer().getPluginManager().registerEvents(this, manager.getTempFly());
+		this.tickTask = Bukkit.getScheduler().runTaskTimer(manager.getTempFly(), this::tick, 1L, 1L);
+	} 
+	
+	public void tick() {
+		if (tags.isEmpty()) {
+			return;
+		}
+		List<UUID> expired = null;
+		for (Map.Entry<UUID, CombatTag> entry : tags.entrySet()) {
+			if (entry.getValue().tick()) {
+				if (expired == null) {
+					expired = new ArrayList<>();
+				}
+				expired.add(entry.getKey());
+			}
+		}
+		if (expired != null) {
+			for (UUID u : expired) {
+				cancelTag(u);
+			}
+		}
+	}
+
+	public void onDisable() {
+		if (tickTask != null) {
+			tickTask.cancel();
+			tickTask = null;
+		}
+		tags.clear();
 	} 
 	
 	public FlightManager getFlightManager() {
@@ -139,9 +172,9 @@ public class CombatHandler implements RequirementProvider, Listener {
 	}
 	
 	public void cancelTag(UUID u) {
-		if (isTagged(u)) {
-			getTag(u).cancel();
-			tags.remove(u);
+		CombatTag tag = tags.remove(u);
+		if (tag != null) {
+			tag.cancel();
 		}
 		
 		Player p = Bukkit.getPlayer(u);

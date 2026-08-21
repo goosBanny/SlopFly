@@ -68,13 +68,12 @@ public abstract class TimeCommand extends TempFlyCommand implements AsyncTimeExe
 		for (int i = 0; i < args.length; i++) {
 			TimeUnit unit;
 			String parse;
-			// /tf give -{unit} 1
-			if (String.valueOf(args[i].charAt(0)).equals("-")) {
+			if (args[i].length() > 0 && args[i].charAt(0) == '-') {
 				if ((unit = tempfly.getCommandManager().parseUnit(args[i].toLowerCase().replaceAll("\\-", ""))) == null) {
 					U.m(s, U.cc("&c(" + args[i] + ") is an unknown time argument!"));
 					return 0;
 				}
-				if (args.length >= i+1) {
+				if (args.length > i + 1) {
 					parse = args[i+1];
 					i++;
 				} else {

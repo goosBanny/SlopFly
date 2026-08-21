@@ -29,7 +29,9 @@ public class TimeManager implements Listener {
 	
 	public TimeManager(TempFly tempfly) {
 		this.tempfly = tempfly;
-		tempfly.getServer().getPluginManager().registerEvents(this, tempfly);
+		if (tempfly != null && tempfly.getServer() != null) {
+			tempfly.getServer().getPluginManager().registerEvents(this, tempfly);
+		}
 	}
 	
 	/**
@@ -178,12 +180,13 @@ public class TimeManager implements Listener {
 			}
 			OfflinePlayer op = Bukkit.getOfflinePlayer(u);
 			Permission perms = tempfly.getHookManager().getPermissions();
+			String worldName = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0).getName();
 			for (Entry<String, Double> group: V.maxTimeGroups.entrySet()) {
 				double current = group.getValue();
 				if (current < highest && current > -1) {
 					continue;
 				}
-				if (op.isOp() || perms.playerHas(Bukkit.getWorlds().get(0).getName(), op, "tempfly.max." + group.getKey())) {
+				if (op.isOp() || (perms != null && perms.playerHas(worldName, op, "tempfly.max." + group.getKey()))) {
 					Console.debug("--| Player has group: " + group.getKey() + " | " + group.getValue());
 					hasGroup = true;
 					if (current == -1) {
@@ -284,6 +287,7 @@ public class TimeManager implements Listener {
 	}
 	
 	public String regexString(String s, double seconds) {
+		if (s == null || s.isEmpty()) return "";
 		//We dont care about the decimal here, it is only used internally for relative time regions.
 		long
 		days = formatTime(TimeUnit.DAYS, Math.ceil(seconds)),
@@ -291,33 +295,37 @@ public class TimeManager implements Listener {
 		minutes = formatTime(TimeUnit.MINUTES, Math.ceil(seconds)),
 		secs = formatTime(TimeUnit.SECONDS, Math.ceil(seconds));
 		
-		StringBuilder sb = new StringBuilder();
 		if (s.contains("{FORMATTED_TIME}")) {
+			StringBuilder sb = new StringBuilder();
 			boolean addSpace = false;
 			if (days > 0) {
 				regexA(sb, days, V.unitDays, false);
 				addSpace = true;
-			} if (hours > 0) {
+			}
+			if (hours > 0) {
 				regexA(sb, hours, V.unitHours, addSpace);
 				addSpace = true;
-			} if (minutes > 0) { 
+			}
+			if (minutes > 0) { 
 				regexA(sb, minutes, V.unitMinutes, addSpace);
 				addSpace = true;
-			} if (secs > 0 || sb.length() == 0) {
+			}
+			if (secs > 0 || sb.length() == 0) {
 				regexA(sb, secs, V.unitSeconds, addSpace);
 			}
+			s = s.replace("{FORMATTED_TIME}", sb.toString());
 		}
-		return s.replaceAll("\\{FORMATTED_TIME}", sb.toString())
-				.replaceAll("\\{DAYS}", String.valueOf(days))
-				.replaceAll("\\{HOURS}", String.valueOf(hours))
-				.replaceAll("\\{MINUTES}", String.valueOf(minutes))
-				.replaceAll("\\{SECONDS}", String.valueOf(secs));
+		if (s.contains("{DAYS}")) s = s.replace("{DAYS}", String.valueOf(days));
+		if (s.contains("{HOURS}")) s = s.replace("{HOURS}", String.valueOf(hours));
+		if (s.contains("{MINUTES}")) s = s.replace("{MINUTES}", String.valueOf(minutes));
+		if (s.contains("{SECONDS}")) s = s.replace("{SECONDS}", String.valueOf(secs));
+		return s;
 	}
 	
 	private void regexA(StringBuilder sb, long quantity, String unit, boolean addSpace) {
-		sb.append((addSpace ? " " : "") + V.timeFormat
-				.replaceAll("\\{QUANTITY}", String.valueOf(quantity))
-				.replaceAll("\\{UNIT}", unit));
+		sb.append(addSpace ? " " : "").append(V.timeFormat
+				.replace("{QUANTITY}", String.valueOf(quantity))
+				.replace("{UNIT}", unit));
 	}
 	
 	public long formatTime(TimeUnit unit, double seconds) {
@@ -355,13 +363,13 @@ public class TimeManager implements Listener {
 				sb.append(V.infinity);
 			} else {
 				if (days > 0) 
-					sb.append(V.fbDays.replaceAll("\\{DAYS}", String.valueOf(days)));
+					sb.append(V.fbDays.replace("{DAYS}", String.valueOf(days)));
 				if (hours > 0) 
-					sb.append(V.fbHours.replaceAll("\\{HOURS}", String.valueOf(hours)));
+					sb.append(V.fbHours.replace("{HOURS}", String.valueOf(hours)));
 				if (minutes > 0) 
-					sb.append(V.fbMinutes.replaceAll("\\{MINUTES}", String.valueOf(minutes)));
+					sb.append(V.fbMinutes.replace("{MINUTES}", String.valueOf(minutes)));
 				if (seconds > 0 || sb.length() == 0) 
-					sb.append(V.fbSeconds.replaceAll("\\{SECONDS}", String.valueOf(seconds)));
+					sb.append(V.fbSeconds.replace("{SECONDS}", String.valueOf(seconds)));
 			}
 			return sb.toString();
 		}

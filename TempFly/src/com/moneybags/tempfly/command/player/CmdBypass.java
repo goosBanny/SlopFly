@@ -26,6 +26,7 @@ public class CmdBypass extends TempFlyCommand {
 		}
 		if (!U.isPlayer(s)) {
 			U.m(s, V.invalidSender);
+			return;
 		}
 		FlightUser user = tempfly.getFlightManager().getUser((Player)s);
 		boolean toggleVal = false;
@@ -44,6 +45,11 @@ public class CmdBypass extends TempFlyCommand {
 		}
 		U.m(s, toggleVal ? V.flyBypassEnabled : V.flyBypassDisabled);
 		user.setRequirementBypass(toggleVal);
+	}
+
+	@Override
+	public boolean hasPermission(CommandSender s) {
+		return U.hasPermission(s, "tempfly.bypass.toggle");
 	}
 
 	@Override
