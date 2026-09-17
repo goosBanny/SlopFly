@@ -90,27 +90,32 @@ public class U {
 	}
 	
 	public static void m(CommandSender p, String s) {
-		if (s == null || s.equals(PREFIX) || s.length() == 0) {
+		if (p == null || s == null || s.equals(PREFIX) || s.isEmpty()) {
 			return;
 		}
 
 		String pfx = V.prefix != null ? V.prefix : "";
-		p.sendMessage(s.replace(PREFIX, pfx));
+		String formatted = s.replace(PREFIX, pfx);
+		com.moneybags.tempfly.TempFly plugin = com.moneybags.tempfly.TempFly.getInstance();
+		if (plugin != null && plugin.getMessageService() != null) {
+			plugin.getMessageService().send(p, formatted);
+		} else {
+			p.sendMessage(formatted);
+		}
 	}
 	
 	public static void m(OfflinePlayer p, String s) {
-		if (p.isOnline()) {
+		if (p != null && p.isOnline()) {
 			m((Player) p, s);
 		}
 	}
 	
 	public static void m(Player p, String s) {
-		if (s == null || s.isEmpty() || (V.prefix != null && s.equals(V.prefix)) || s.equals(PREFIX)) {
+		if (p == null || s == null || s.isEmpty() || (V.prefix != null && s.equals(V.prefix)) || s.equals(PREFIX)) {
 			return;
 		}
 
-		String pfx = V.prefix != null ? V.prefix : "";
-		p.sendMessage(s.replace(PREFIX, pfx));
+		m((CommandSender) p, s);
 	}
 	
 	public static boolean hasPermission(CommandSender s, String perm){

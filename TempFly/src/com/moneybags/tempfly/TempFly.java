@@ -23,6 +23,8 @@ import com.moneybags.tempfly.gui.pages.PageShop;
 import com.moneybags.tempfly.gui.pages.PageTrails;
 import com.moneybags.tempfly.hook.HookManager;
 import com.moneybags.tempfly.hook.TempFlyHook;
+import com.moneybags.tempfly.message.MessageService;
+import com.moneybags.tempfly.safety.FallSafetyService;
 import com.moneybags.tempfly.time.TimeManager;
 import com.moneybags.tempfly.util.AutoSave;
 import com.moneybags.tempfly.util.Console;
@@ -33,6 +35,11 @@ import com.moneybags.tempfly.util.data.Files;
 
 public class TempFly extends JavaPlugin {
 	
+	private static TempFly instance;
+	public static TempFly getInstance() {
+		return instance;
+	}
+
 	// static abusers unite
 	private static TempFlyAPI tfApi;
 	public static TempFlyAPI getAPI() {
@@ -40,6 +47,8 @@ public class TempFly extends JavaPlugin {
 	}
 
 	
+	private MessageService messageService;
+	private FallSafetyService fallSafetyService;
 	private HookManager hooks;
 	private DataBridge bridge;
 	private FlightManager flight;
@@ -48,6 +57,14 @@ public class TempFly extends JavaPlugin {
 	private GuiManager gui;
 	private BukkitTask autosave;
 	
+	public MessageService getMessageService() {
+		return messageService;
+	}
+
+	public FallSafetyService getFallSafetyService() {
+		return fallSafetyService;
+	}
+
 	public HookManager getHookManager() {
 		return hooks;
 	}
@@ -74,6 +91,9 @@ public class TempFly extends JavaPlugin {
 	
 	@Override
 	public void onEnable() {
+		instance = this;
+		this.messageService = new MessageService();
+		this.fallSafetyService = new FallSafetyService(this);
 		Console.setLogger(this.getLogger());
 		
 		Files.createFiles(this);
@@ -150,6 +170,12 @@ public class TempFly extends JavaPlugin {
 	
 	@Override
 	public void onDisable() {
+		if (fallSafetyService != null) {
+			fallSafetyService.clearAll();
+		}
+		if (messageService != null) {
+			messageService.clearCache();
+		}
 		if (flight != null) {
 			flight.onDisable();
 		}
@@ -159,6 +185,7 @@ public class TempFly extends JavaPlugin {
 		if (bridge != null) {
 			bridge.onDisable();
 		}
+		instance = null;
 	}
 	
 	/*
@@ -166,6 +193,9 @@ public class TempFly extends JavaPlugin {
 	 */
 	//TODO reload hooks
 	public void reloadTempfly() {
+		if (messageService != null) {
+			messageService.clearCache();
+		}
 		gui.endAllSessions();
 		
 		bridge.commitAll();

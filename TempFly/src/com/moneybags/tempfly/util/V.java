@@ -37,6 +37,7 @@ public class V {
 
 			timeGivenOther,
 			timeGivenSelf,
+			timeGivenAll,
 			timeRemovedOther,
 			timeRemovedSelf,
 			timeSentOther,
@@ -195,6 +196,27 @@ public class V {
 	public static Map<String, Double> dailyBonus,
 			maxTimeGroups;
 
+	private static com.moneybags.tempfly.config.GeneralConfig generalConfig;
+	private static com.moneybags.tempfly.config.CombatConfig combatConfig;
+	private static com.moneybags.tempfly.config.StorageConfig storageConfig;
+	private static com.moneybags.tempfly.config.AestheticConfig aestheticConfig;
+
+	public static com.moneybags.tempfly.config.GeneralConfig getGeneral() {
+		return generalConfig;
+	}
+
+	public static com.moneybags.tempfly.config.CombatConfig getCombat() {
+		return combatConfig;
+	}
+
+	public static com.moneybags.tempfly.config.StorageConfig getStorage() {
+		return storageConfig;
+	}
+
+	public static com.moneybags.tempfly.config.AestheticConfig getAesthetic() {
+		return aestheticConfig;
+	}
+
 	public static void loadValues() {
 		dailyBonus = new HashMap<>();
 		maxTimeGroups = new HashMap<>();
@@ -204,6 +226,11 @@ public class V {
 		disabledWorlds = new ArrayList<>();
 		disabledRegions = new ArrayList<>();
 		FileConfiguration config = Files.config;
+
+		generalConfig = com.moneybags.tempfly.config.GeneralConfig.from(Files.config);
+		combatConfig = com.moneybags.tempfly.config.CombatConfig.from(Files.config);
+		storageConfig = com.moneybags.tempfly.config.StorageConfig.from(Files.config);
+		aestheticConfig = com.moneybags.tempfly.config.AestheticConfig.from(Files.config, Files.lang);
 
 		prefix = U.cc(Files.lang.getString("system.prefix", "&8[&dTemp&fFly&8]"));
 		reload = st(C.LANG, "system.reload");
@@ -224,6 +251,7 @@ public class V {
 
 		timeGivenOther = st(C.LANG, "general.time.given_other");
 		timeGivenSelf = st(C.LANG, "general.time.given_self");
+		timeGivenAll = st(C.LANG, "general.time.given_all");
 		timeRemovedOther = st(C.LANG, "general.time.removed_other");
 		timeRemovedSelf = st(C.LANG, "general.time.removed_self");
 		timeSentOther = st(C.LANG, "general.time.sent_other");

@@ -204,4 +204,12 @@ public class TempFlyAPI {
 	public void setRegionProvider(RegionProvider provider) {
 		tempfly.getHookManager().setRegionProvider(provider);
 	}
+
+	public com.moneybags.tempfly.message.MessageService getMessageService() {
+		return tempfly.getMessageService();
+	}
+
+	public com.moneybags.tempfly.safety.FallSafetyService getFallSafetyService() {
+		return tempfly.getFallSafetyService();
+	}
 } 
