@@ -22,7 +22,9 @@ import org.bukkit.scheduler.BukkitTask;
 import com.moneybags.tempfly.aesthetic.particle.Particles;
 import com.moneybags.tempfly.environment.FlightEnvironment;
 import com.moneybags.tempfly.environment.RelativeTimeRegion;
+import com.moneybags.tempfly.fly.FlightEngine;
 import com.moneybags.tempfly.fly.FlightManager;
+import com.moneybags.tempfly.fly.FlightState;
 import com.moneybags.tempfly.fly.RequirementProvider;
 import com.moneybags.tempfly.fly.RequirementProvider.InquiryType;
 import com.moneybags.tempfly.fly.result.FlightResult;
@@ -43,32 +45,11 @@ public class FlightUser {
 	private final TimeManager timeManager;
 	private final Player p;
 	private final UserEnvironment environment;
+	private final FlightState state;
+	private final FlightEngine engine;
 	
-	//A list of reasons the player cannot currently fly.
-	private Map<RequirementProvider, Map<InquiryType, FlightResult>> requirements = new ConcurrentHashMap<>();
-	
-	private BukkitTask
-	initialTask, enforceTask, damageProtection;
-	
-	private String
-	listName, tagName, particle;
-	
-	private boolean
-	enabled, autoEnable,
-	infinite = true,
-	bypass = true;
-	
-	private int
-	idle = -1;
-	
-	private double
-	time;
-	
-	private long
-	accumulativeCycle;
-	
-	private double
-	selectedSpeed = -999;
+	private BukkitTask initialTask, enforceTask;
+	private String listName, tagName;
 
 	public FlightUser(Player p, FlightManager manager,
 			double time, String particle, boolean infinite, boolean bypass, boolean logged, boolean compatLogged,
@@ -77,11 +58,8 @@ public class FlightUser {
 		this.timeManager = manager.getTempFly().getTimeManager();
 		
 		this.p = p;
-		this.time = time;
-		this.particle = particle;
-		this.infinite = infinite;
-		this.bypass = bypass;
-		this.selectedSpeed = selectedSpeed;
+		this.state = new FlightState(p.getUniqueId(), time, particle, infinite, bypass, selectedSpeed);
+		this.engine = new FlightEngine();
 		
 		this.environment = new UserEnvironment(this, p);
 		this.listName = p.getPlayerListName();
@@ -90,6 +68,14 @@ public class FlightUser {
 		manager.updateLocation(this, p.getLocation(), p.getLocation(), true, true);
 		
 		initialTask = Bukkit.getScheduler().runTaskLater(manager.getTempFly(), new InitialTask(logged, compatLogged), 1);
+	}
+
+	public FlightState getState() {
+		return state;
+	}
+
+	public FlightEngine getEngine() {
+		return engine;
 	}
 	
 	private class InitialTask implements Runnable {
@@ -105,7 +91,7 @@ public class FlightUser {
 		
 		@Override
 		public void run() {
-			if (logged && (hasInfiniteFlight() || time > 0) && V.autoFly) {
+			if (logged && (hasInfiniteFlight() || state.getTime() > 0) && V.autoFly) {
 				Console.debug("--| Player is flight logged");
 				if (!enableFlight()) {
 					sendRequirementMessage();
@@ -149,7 +135,7 @@ public class FlightUser {
 	}
 	
 	public double getTime() {
-		return time;
+		return state.getTime();
 	}
 	
 	public Player getPlayer() {
@@ -160,40 +146,40 @@ public class FlightUser {
 		if (time <= 0) {
 			time = 0;
 		}
-		double oldTime = this.time;
-		this.time = time;
+		double oldTime = state.getTime();
+		state.setTime(time);
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), time);
 		if (!hasInfiniteFlight() && p.isFlying()) {
 			if (V.actionBar) {doActionBar();}
 		}
-		if (time > 0 && hasAutoFlyQueued() && !enabled) {
+		if (time > 0 && hasAutoFlyQueued() && !hasFlightEnabled()) {
 			enableFlight();
 		} else if (time == 0) {
 			disableFlight(0, !V.damageTime);
-			autoEnable = true;
-		} else if (oldTime == 0 && time > 0 && !enabled && V.autoFlyTimeReceived) {
+			setAutoFly(true);
+		} else if (oldTime == 0 && time > 0 && !hasFlightEnabled() && V.autoFlyTimeReceived) {
 			enableFlight();
 		}
 	}
 	
 	public void resetIdleTimer() {
-		this.idle = -1;
+		state.resetIdle();
 	}
 	
 	public boolean isIdle() {
-		return V.idleThreshold > -1 && idle >= (V.idleThreshold*20);
+		return V.idleThreshold > -1 && state.isIdle(V.idleThreshold * 20L);
 	}
 	
 	public boolean hasFlightEnabled() {
-		return enabled;
+		return state.isEnabled();
 	}
 	
 	public boolean hasAutoFlyQueued() {
-		return autoEnable;// && V.autoFly;
+		return state.isAutoEnable();
 	}
 	
 	public void setAutoFly(boolean auto) {
-		this.autoEnable = auto;
+		state.setAutoEnable(auto);
 	}
 	
 	public boolean isOpenForSubmission() {
@@ -208,7 +194,7 @@ public class FlightUser {
 	 * @return true if the user has infinite flight and it is enabled.
 	 */
 	public boolean hasInfiniteFlight() {
-		return (p.hasPermission("tempfly.infinite") && infinite) || environment.hasInfiniteFlight();
+		return (p.hasPermission("tempfly.infinite") && state.isInfinite()) || (environment != null && environment.hasInfiniteFlight());
 	}
 	
 	/**
@@ -217,14 +203,14 @@ public class FlightUser {
 	 */
 	public void setInfiniteFlight(boolean enable) {
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_INFINITE, p.getUniqueId().toString()), enable);
-		this.infinite = enable;
+		state.setInfinite(enable);
 		this.cachedActionBarText = null;
 		this.cachedActionBarSecond = -1;
 		updateList(false);
 		updateName(false);
-		if (!enable && V.actionBar && time > 0) {
+		if (!enable && V.actionBar && state.getTime() > 0) {
 			doActionBar();
-		} else if (!enable && time <= 0) {
+		} else if (!enable && state.getTime() <= 0) {
 			disableFlight(0, !V.damageCommand);
 			setAutoFly(true);
 		} else if (enable && hasAutoFlyQueued()) {
@@ -238,7 +224,7 @@ public class FlightUser {
 	 * @return true if the user has requirement bypass and it is enabled.
 	 */
 	public boolean hasRequirementBypass() {
-		return p.hasPermission("tempfly.bypass") && bypass;
+		return p.hasPermission("tempfly.bypass") && state.hasFlightBypass();
 	}
 	
 	/**
@@ -247,13 +233,15 @@ public class FlightUser {
 	 */
 	public void setRequirementBypass(boolean enable) {
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_BYPASS, p.getUniqueId().toString()), enable);
-		this.bypass = enable;
+		state.setBypass(enable);
 		if (enable && hasAutoFlyQueued()) {
 			enableFlight();
 		} else if (!enable && hasFlightEnabled() && hasFlightRequirements()) {
 			FlightResult result = getCurrentRequirement();
-			U.m(p, result.getMessage());
-			disableFlight(0, result.hasDamageProtection());
+			if (result != null) {
+				U.m(p, result.getMessage());
+				disableFlight(0, result.hasDamageProtection());
+			}
 			setAutoFly(true);
 		}
 	}
@@ -273,7 +261,7 @@ public class FlightUser {
 	 * Internal clean up method called when the player quits or server is reloading.
 	 */
 	public void onQuit(boolean reload) {
-		if (enabled || hasAutoFlyQueued()) {
+		if (hasFlightEnabled() || hasAutoFlyQueued()) {
 			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, p.getUniqueId().toString()), true);
 			if (!reload) {disableFlight(-1, false);}
 		} else if (p.isFlying()) {
@@ -315,7 +303,7 @@ public class FlightUser {
 		@Override
 		public void run() {
 			// If the users flight is enabled again when the task runs we will return.
-			if (enabled) return;
+			if (hasFlightEnabled()) return;
 			GameMode m = p.getGameMode();
 			if (m == GameMode.CREATIVE && V.creativeTimer) {
 				Console.debug("--- Enforcing disabled flight A ----");
@@ -337,8 +325,8 @@ public class FlightUser {
 	 */
 	public void disableFlight(int delay, boolean fallSafely) {
 		Console.debug("------ disable flight -------");
-		boolean wasEnabled = this.enabled;
-		this.enabled = false;
+		boolean wasEnabled = state.isEnabled();
+		state.setEnabled(false);
 		if (!wasEnabled && !p.isFlying() && !p.getAllowFlight()) {
 			return;
 		}
@@ -379,14 +367,14 @@ public class FlightUser {
 			setAutoFly(true);
 			return false;
 		}
-		if (time <= 0 && !hasInfiniteFlight()) {
+		if (state.getTime() <= 0 && !hasInfiniteFlight()) {
 			setAutoFly(true);
 			return false;
 		}
 		Console.debug("--> set flying true");
-		enabled = true;
+		state.setEnabled(true);
 		Runnable action = () -> {
-			if (p.isOnline() && enabled) {
+			if (p.isOnline() && state.isEnabled()) {
 				p.setAllowFlight(true);
 				p.setFlying(!p.isOnGround());
 				applySpeedCorrect(true, 0);
@@ -424,33 +412,26 @@ public class FlightUser {
 	
 	
 	public RequirementProvider[] getFlightRequirements() {
-		return requirements.keySet().toArray(new RequirementProvider[requirements.size()]);
+		return state.getRequirements().keySet().toArray(new RequirementProvider[0]);
 	}
 	
 	public boolean hasFlightRequirement(RequirementProvider requirement) {
-		return requirements.containsKey(requirement);
+		return state.hasRequirement(requirement);
 	}
 	
 	public boolean hasFlightRequirement(RequirementProvider requirement, InquiryType type) {
-		Map<InquiryType, FlightResult> map = requirements.get(requirement);
-		return map != null && map.containsKey(type);
+		return state.hasRequirement(requirement, type);
 	}
 	
 	public boolean hasFlightRequirements() {
-		return !requirements.isEmpty();
+		return state.hasFlightRequirements();
 	}
 	
 	public void submitFlightRequirement(RequirementProvider requirement, FlightResult failedResult) {
-		if (V.debug) {Console.debug("", "---- Submitting failed requirement to user (" + p.getName() + ") ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		requirements.compute(requirement, (k, types) -> {
-			if (types == null) {
-				types = new HashMap<>();
-			}
-			types.put(failedResult.getInquiryType(), failedResult);
-			return types;
-		});
-		if (enabled) {
-			autoEnable = true;
+		if (V.debug) {Console.debug("", "---- Submitting failed requirement to user (" + p.getName() + ") ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + state.getRequirements());}
+		state.submitRequirement(requirement, failedResult);
+		if (hasFlightEnabled()) {
+			setAutoFly(true);
 		}
 	}
 	
@@ -461,11 +442,8 @@ public class FlightUser {
 	 * @return true if there are no more requirements
 	 */
 	public boolean removeFlightRequirement(RequirementProvider requirement, InquiryType type) {
-		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		requirements.computeIfPresent(requirement, (k, types) -> {
-			types.remove(type);
-			return types.isEmpty() ? null : types;
-		});
+		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + state.getRequirements());}
+		state.removeRequirement(requirement, type);
 		return !hasFlightRequirements();
 	}
 	
@@ -475,27 +453,24 @@ public class FlightUser {
 	 * @return true if there are no more requirements
 	 */
 	public boolean removeFlightRequirement(RequirementProvider requirement) {
-		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + requirements);}
-		requirements.remove(requirement);
+		if (V.debug) {Console.debug("", "---- Removing flight requirement from user ----", "--| Requirement: " + requirement.getClass().toGenericString(), "--| Requirements: " + state.getRequirements());}
+		state.removeRequirements(requirement);
 		return !hasFlightRequirements();
 	}
 	
 	public void removeFlightRequirements() {
-		this.requirements.clear();
+		state.clearRequirements();
 	}
 	
 	public void sendRequirementMessage() {
-		if (hasFlightRequirements()) {
-			// lmao whats this trash
-			U.m(p, requirements.values().iterator().next().values().iterator().next().getMessage());
+		FlightResult req = getCurrentRequirement();
+		if (req != null) {
+			U.m(p, req.getMessage());
 		}
 	}
 	
 	public FlightResult getCurrentRequirement() {
-		if (hasFlightRequirements()) {
-			return requirements.values().iterator().next().values().iterator().next();
-		}
-		return null;
+		return state.getCurrentRequirement();
 	}
 	
 	/**
@@ -621,12 +596,12 @@ public class FlightUser {
 	 * @return True if there are no more requirements.
 	 */
 	public boolean updateRequirements(String enableMessage) {
-		Console.debug("", "--- updating requirements ---", "--| requirements: " + requirements.toString(),
-				"--| flight enabled: " + enabled, "--| auto flight: " + autoEnable, "--| time: " + time);
+		Console.debug("", "--- updating requirements ---", "--| requirements: " + state.getRequirements().toString(),
+				"--| flight enabled: " + hasFlightEnabled(), "--| auto flight: " + hasAutoFlyQueued(), "--| time: " + state.getTime());
 		
-		if (requirements.size() == 0 && !hasFlightEnabled() && (time > 0 || hasInfiniteFlight())) {
+		if (!hasFlightRequirements() && !hasFlightEnabled() && (state.getTime() > 0 || hasInfiniteFlight())) {
 			if (hasAutoFlyQueued()) {
-				autoEnable = false;
+				setAutoFly(false);
 				if (!hasRequirementBypass()) {
 					Console.debug("--|> AutoFly engaged!");
 					U.m(p, enableMessage);
@@ -637,7 +612,7 @@ public class FlightUser {
 			}
 			return true;
 		}
-		return requirements.size() == 0;
+		return !hasFlightRequirements();
 	}
 	
 	
@@ -652,21 +627,22 @@ public class FlightUser {
 	
 	
 	public void addDamageProtection() {
-		removeDamageProtection();
-		damageProtection = Bukkit.getScheduler().runTaskLater(manager.getTempFly(), () -> {
-			removeDamageProtection();
-		}, 120);
+		if (manager != null && manager.getTempFly() != null && manager.getTempFly().getFallSafetyService() != null && p != null) {
+			manager.getTempFly().getFallSafetyService().addProtection(p);
+		}
 	}
 	
 	public void removeDamageProtection() {
-		if (damageProtection != null) {
-			damageProtection.cancel();
-			damageProtection = null;
+		if (manager != null && manager.getTempFly() != null && manager.getTempFly().getFallSafetyService() != null && p != null) {
+			manager.getTempFly().getFallSafetyService().removeProtection(p.getUniqueId());
 		}
 	}
 	
 	public boolean hasDamageProtection() {
-		return damageProtection != null;
+		if (manager != null && manager.getTempFly() != null && manager.getTempFly().getFallSafetyService() != null && p != null) {
+			return manager.getTempFly().getFallSafetyService().hasProtection(p.getUniqueId());
+		}
+		return false;
 	}
 	
 	
@@ -686,7 +662,7 @@ public class FlightUser {
 	 * @return The enum string representation of the particle
 	 */
 	public String getTrail() {
-		return particle;
+		return state.getTrail();
 	}
 	
 	/**
@@ -695,11 +671,12 @@ public class FlightUser {
 	 * @param particle
 	 */
 	public void setTrail(String particle) {
-		this.particle = particle;
+		state.setTrail(particle);
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TRAIL, p.getUniqueId().toString()), particle);
 	}
 	
 	public void playTrail() {
+		String particle = state.getTrail();
 		if (particle == null || particle.length() == 0) {return;}
 		
 		if (p.getGameMode() == GameMode.SPECTATOR) {
@@ -721,13 +698,13 @@ public class FlightUser {
 	public String getListPlaceholder() {
 		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.listPlaceholderOn : V.listPlaceholderOff)
 				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", listName), time, hasInfiniteFlight());
+				.replaceAll("\\{OLD_TAG}", listName), state.getTime(), hasInfiniteFlight());
 	}
 	
 	public String getTagPlaceholder() {
 		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.tagPlaceholderOn : V.tagPlaceholderOff)
 				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight());
+				.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight());
 	}
 	
 	private void updateList(boolean reset) {
@@ -735,7 +712,7 @@ public class FlightUser {
 		p.setPlayerListName(!p.isFlying() || reset
 				? listName : timeManager.regexString(V.listName
 						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight()));
+						.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight()));
 	}
 	
 	private void updateName(boolean reset) {
@@ -743,7 +720,7 @@ public class FlightUser {
 		p.setDisplayName(!p.isFlying() || reset
 				? tagName : timeManager.regexString(V.tagName
 						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight()));
+						.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight()));
 	}
 	
 	private String cachedActionBarText;
@@ -752,7 +729,7 @@ public class FlightUser {
 	public void doActionBar() {
 		if (p == null || !p.isOnline()) return;
 		boolean inf = hasInfiniteFlight();
-		long roundedSec = inf ? -999999L : (long) Math.ceil(time);
+		long roundedSec = inf ? -999999L : (long) Math.ceil(state.getTime());
 		if (cachedActionBarText == null || cachedActionBarSecond != roundedSec) {
 			cachedActionBarSecond = roundedSec;
 			cachedActionBarText = timeManager.regexString(V.actionText, getTime(), inf);
@@ -770,16 +747,16 @@ public class FlightUser {
 	 */
 	
 	public double getSpeedPreference() {
-		return selectedSpeed;
+		return state.getSelectedSpeed();
 	}
 	
 	public void setSpeedPreference(double speed) {
-		this.selectedSpeed = speed;
+		state.setSelectedSpeed(speed);
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_SPEED, p.getUniqueId().toString()), speed);
 	}
 	
 	public boolean hasSpeedPreference() {
-		return selectedSpeed > 0 && manager.getFlightEnvironment().allowSpeedPreference();
+		return state.getSelectedSpeed() > 0 && manager.getFlightEnvironment().allowSpeedPreference();
 	}
 	
 	/**
@@ -789,9 +766,9 @@ public class FlightUser {
 	public float applySpeedCorrect(boolean message, int delay) {
 		float maxSpeed = getMaxSpeed();
 		Console.debug("--| Max speed: " + String.valueOf(maxSpeed));
-		Console.debug("--| Preferred speed: " + String.valueOf(selectedSpeed));
-		if (hasSpeedPreference() && maxSpeed > selectedSpeed && manager.getFlightEnvironment().allowSpeedPreference()) {
-			maxSpeed = (float) selectedSpeed;
+		Console.debug("--| Preferred speed: " + String.valueOf(state.getSelectedSpeed()));
+		if (hasSpeedPreference() && maxSpeed > state.getSelectedSpeed() && manager.getFlightEnvironment().allowSpeedPreference()) {
+			maxSpeed = (float) state.getSelectedSpeed();
 		}
 		
 		final float val = maxSpeed / 10;
@@ -950,7 +927,7 @@ public class FlightUser {
 		if (p == null || !p.isValid()) {
 			return;
 		}
-		idle += deltaTicks;
+		state.addIdleTicks(deltaTicks);
 		doIdentifier();
 		
 		if (hasInfiniteFlight()) {
@@ -964,36 +941,31 @@ public class FlightUser {
 			return;
 		}
 		
-		accumulativeCycle += deltaTicks * 50L;
-		while (accumulativeCycle >= 1000L) {
-			accumulativeCycle -= 1000L;
+		state.addAccumulativeCycleMillis(deltaTicks * 50L);
+		while (state.getAccumulativeCycleMillis() >= 1000L) {
+			state.setAccumulativeCycleMillis(state.getAccumulativeCycleMillis() - 1000L);
 			executeTimer();
 		}
 	}
 
 	private void executeTimer() {
-		if (time > 0) {
-			double cost = 1;
-			for (RelativeTimeRegion rtr : environment.getRelativeTimeRegions()) {
-				cost *= rtr.getFactor();
-			}
-			time = time - cost;
-			if (time < 0) time = 0;
+		if (state.getTime() > 0) {
+			FlightEngine.TickOutcome outcome = engine.processOneSecondCycle(state, environment.toContext());
+			double currentTime = state.getTime();
+			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), currentTime);	
 			
-			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, p.getUniqueId().toString()), time);	
-			
-			if (V.warningTimes.contains((long) time)) {
-				p.sendTitle(timeManager.regexString(V.warningTitle, time),
-					timeManager.regexString(V.warningSubtitle, time), 15, 30, 15);
+			if (V.warningTimes != null && V.warningTimes.contains((long) currentTime)) {
+				p.sendTitle(timeManager.regexString(V.warningTitle, currentTime),
+					timeManager.regexString(V.warningSubtitle, currentTime), 15, 30, 15);
 			}
 			if (V.actionBar) {
 				doActionBar();
 			}
 			
-			if (time == 0) {
+			if (outcome == FlightEngine.TickOutcome.EXPIRED || currentTime <= 0) {
 				timeExpired();
 			}
-		} else if (enabled) {
+		} else if (hasFlightEnabled()) {
 			timeExpired();
 		}
 	}
@@ -1001,36 +973,30 @@ public class FlightUser {
 	private void timeExpired() {
 		disableFlight(-1, !V.damageTime);
 		U.m(p, V.invalidTimeSelf);
-		autoEnable = true;
+		setAutoFly(true);
 	}
 
 	private boolean doFlightTimer() {
-		if (time <= 0) {
-			return false;
-		}
-		if (V.permaTimer) {
-			return doIdleCheck();
-		}
-		if (p.getGameMode() == GameMode.CREATIVE && !V.creativeTimer) {
-			return false;
-		}
-		if (p.getGameMode() == GameMode.SPECTATOR && !V.spectatorTimer) {
-			return false;
-		}
-		if (p.getVehicle() != null) {
-			return false;
-		}
-		if (!p.isFlying()) {
-			if (V.groundTimer && !doIdleCheck()) {
-				return false;
+		FlightEngine.TimerEligibility eligibility = engine.evaluateEligibility(
+				state,
+				p.isFlying(),
+				p.isOnGround(),
+				isIdle(),
+				p.getGameMode(),
+				p.getVehicle() != null,
+				V.getGeneral()
+		);
+		if (eligibility != FlightEngine.TimerEligibility.ELIGIBLE) {
+			if (eligibility == FlightEngine.TimerEligibility.IDLE_RESTRICTED) {
+				doIdleDropAndMessage();
 			}
-			return V.groundTimer;
+			return false;
 		}
 		return doIdleCheck();
 	}
 
 	private void doIdentifier() {
-		if (!enabled) {
+		if (!hasFlightEnabled()) {
 			return;
 		}
 		if ((previouslyFlying && !p.isFlying()) || (!previouslyFlying && p.isFlying())) {
@@ -1042,19 +1008,22 @@ public class FlightUser {
 
 	private boolean doIdleCheck() {
 		if (isIdle()) {
-			if (V.idleDrop) {
-				disableFlight(0, !V.damageIdle);
-			}
-			
-			if (!this.messaged) {
-				U.m(p, V.idleDrop ? V.disabledIdle : V.consideredIdle);
-				this.messaged = true;
-			}
+			doIdleDropAndMessage();
 			return V.idleTimer;
 		} else {
 			this.messaged = false;
 		}
 		
 		return true;
+	}
+
+	private void doIdleDropAndMessage() {
+		if (V.idleDrop) {
+			disableFlight(0, !V.damageIdle);
+		}
+		if (!this.messaged) {
+			U.m(p, V.idleDrop ? V.disabledIdle : V.consideredIdle);
+			this.messaged = true;
+		}
 	}
 }

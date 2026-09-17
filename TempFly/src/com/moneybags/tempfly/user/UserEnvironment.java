@@ -192,5 +192,18 @@ public class UserEnvironment {
 		}
 		return encompassing.containsAll(regions);
 	}
+
+	public com.moneybags.tempfly.fly.EnvironmentContext toContext() {
+		double factor = 1.0;
+		for (RelativeTimeRegion rtr : cachedRtArray) {
+			factor *= rtr.getFactor();
+		}
+		List<String> regNames = new ArrayList<>();
+		for (CompatRegion r : cachedRegionArray) {
+			regNames.add(r.getId());
+		}
+		String world = user != null && user.getPlayer() != null ? user.getPlayer().getWorld().getName() : "world";
+		return com.moneybags.tempfly.fly.EnvironmentContext.of(factor, freeFlight, -999f, regNames, world);
+	}
 }
 
