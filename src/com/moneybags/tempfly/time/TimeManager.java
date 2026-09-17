@@ -421,14 +421,14 @@ public class TimeManager implements Listener {
 			seconds = formatTime(TimeUnit.SECONDS, supply);
 			
 			StringBuilder sb = new StringBuilder();
-			if (days > 0) 
-				sb.append(V.fbDays.replace("{DAYS}", String.valueOf(days)));
-			if (hours > 0) 
-				sb.append(V.fbHours.replace("{HOURS}", String.valueOf(hours)));
-			if (minutes > 0) 
-				sb.append(V.fbMinutes.replace("{MINUTES}", String.valueOf(minutes)));
-			if (seconds > 0 || sb.length() == 0) 
-				sb.append(V.fbSeconds.replace("{SECONDS}", String.valueOf(seconds)));
+			if (days > 0 && V.placeholderTimeDays != null) 
+				sb.append(V.placeholderTimeDays.replace("{DAYS}", String.valueOf(days)));
+			if (hours > 0 && V.placeholderTimeHours != null) 
+				sb.append(V.placeholderTimeHours.replace("{HOURS}", String.valueOf(hours)));
+			if (minutes > 0 && V.placeholderTimeMinutes != null) 
+				sb.append(V.placeholderTimeMinutes.replace("{MINUTES}", String.valueOf(minutes)));
+			if ((seconds > 0 || sb.length() == 0) && V.placeholderTimeSeconds != null) 
+				sb.append(V.placeholderTimeSeconds.replace("{SECONDS}", String.valueOf(seconds)));
 			return sb.toString();
 		}
 		case TIME_DAYS:

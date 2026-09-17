@@ -93,17 +93,11 @@ public class V {
 			requireFailStruct,
 
 			particleType,
-			listName,
-			listPlaceholderOn,
-			listPlaceholderOff,
-			tagName,
-			tagPlaceholderOn,
-			tagPlaceholderOff,
 
-			fbDays,
-			fbHours,
-			fbMinutes,
-			fbSeconds,
+			placeholderTimeDays,
+			placeholderTimeHours,
+			placeholderTimeMinutes,
+			placeholderTimeSeconds,
 
 			warningTitle,
 			warningSubtitle,
@@ -132,8 +126,6 @@ public class V {
 			payable,
 			particles,
 			particleDefault,
-			list,
-			tag,
 			// Combat tag
 			tagAttackPlayer,
 			tagAttackMob,
@@ -271,6 +263,10 @@ public class V {
 		placeholderFlyingNo = aestheticConfig.placeholderFlyingNo();
 		placeholderUnknownUser = aestheticConfig.placeholderUnknownUser();
 		placeholderInvalid = aestheticConfig.placeholderInvalid();
+		placeholderTimeDays = aestheticConfig.placeholderTimeDays();
+		placeholderTimeHours = aestheticConfig.placeholderTimeHours();
+		placeholderTimeMinutes = aestheticConfig.placeholderTimeMinutes();
+		placeholderTimeSeconds = aestheticConfig.placeholderTimeSeconds();
 
 		unitSeconds = st(C.LANG, "general.unit.seconds", "s");
 		unitMinutes = st(C.LANG, "general.unit.minutes", "m");
@@ -315,16 +311,10 @@ public class V {
 		requireFailHeight = st(C.LANG, "general.requirement.fail.height");
 		requireFailStruct = st(C.LANG, "general.requirement.fail.structure");
 
-		fbDays = st(C.LANG, "aesthetic.featherboard.days");
-		fbHours = st(C.LANG, "aesthetic.featherboard.hours");
-		fbMinutes = st(C.LANG, "aesthetic.featherboard.minutes");
-		fbSeconds = st(C.LANG, "aesthetic.featherboard.seconds");
-		infinity = st(C.LANG, "aesthetic.symbols.infinity");
-
-		warningTitle = st(C.CONFIG, "aesthetic.warning.title");
-		warningSubtitle = st(C.CONFIG, "aesthetic.warning.subtitle");
-
-		actionText = st(C.CONFIG, "aesthetic.action_bar.text");
+		infinity = aestheticConfig.infinitySymbol();
+		warningTitle = aestheticConfig.warningTitle();
+		warningSubtitle = aestheticConfig.warningSubtitle();
+		actionText = aestheticConfig.actionText();
 
 		trailRemovedSelf = st(C.LANG, "aesthetic.trail.removed_self");
 		trailRemovedOther = st(C.LANG, "aesthetic.trail.removed_other");
@@ -400,19 +390,13 @@ public class V {
 		idleTimer = config.getBoolean("general.timer.idle");
 		idleDrop = config.getBoolean("general.idle.drop_player");
 		idleThreshold = config.getInt("general.idle.threshold");
-		payable = config.getBoolean("general.time.payable");
-		particles = config.getBoolean("aesthetic.identifier.particles.enabled");
-		particleType = config.getString("aesthetic.identifier.particles.type", "VILLAGER_HAPPY");
-		particleDefault = config.getBoolean("aesthetic.identifier.particles.display_by_default");
-		hideVanish = config.getBoolean("aesthetic.identifier.particles.hide_vanish");
-		list = config.getBoolean("aesthetic.identifier.tab_list.enabled");
-		listName = st(C.CONFIG, "aesthetic.identifier.tab_list.name");
-		listPlaceholderOn = st(C.CONFIG, "aesthetic.identifier.tab_list.placeholder.enabled");
-		listPlaceholderOff = st(C.CONFIG, "aesthetic.identifier.tab_list.placeholder.disabled");
-		tag = config.getBoolean("aesthetic.identifier.name_tag.enabled");
-		tagName = st(C.CONFIG, "aesthetic.identifier.name_tag.name");
-		tagPlaceholderOn = st(C.CONFIG, "aesthetic.identifier.name_tag.placeholder.enabled");
-		tagPlaceholderOff = st(C.CONFIG, "aesthetic.identifier.name_tag.placeholder.disabled");
+		payable = config.getBoolean("general.time.payable", false);
+		particles = aestheticConfig.particles();
+		particleType = aestheticConfig.particleType();
+		particleDefault = aestheticConfig.particleDefault();
+		hideVanish = config.contains("aesthetic.particles.hide_vanish")
+				? config.getBoolean("aesthetic.particles.hide_vanish")
+				: config.getBoolean("aesthetic.identifier.particles.hide_vanish", true);
 		tagAttackPlayer = config.getBoolean("general.combat.attack_player");
 		tagAttackMob = config.getBoolean("general.combat.attack_mob");
 		tagAttackedByPlayer = config.getBoolean("general.combat.attacked_by_player");

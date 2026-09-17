@@ -52,7 +52,6 @@ public class FlightUser {
 	private final FlightEngine engine;
 	
 	private BukkitTask initialTask, enforceTask;
-	private String listName, tagName;
 
 	public FlightUser(Player p, FlightManager manager, UserFlightData data) {
 		this(p, manager, data.getTime(), data.getTrail(), data.isInfinite(), data.isBypass(),
@@ -70,8 +69,6 @@ public class FlightUser {
 		this.engine = new FlightEngine();
 		
 		this.environment = new UserEnvironment(this, p);
-		this.listName = p.getPlayerListName();
-		this.tagName = p.getDisplayName();
 		
 		manager.updateLocation(this, p.getLocation(), p.getLocation(), true, true);
 		
@@ -225,11 +222,11 @@ public class FlightUser {
 	 * @return true if the user has infinite flight and it is enabled.
 	 */
 	public boolean hasInfiniteFlight() {
-		return (p.hasPermission("tempfly.infinite") && state.isInfinite()) || (environment != null && environment.hasInfiniteFlight());
+		return (p != null && p.hasPermission("tempfly.infinite")) || (environment != null && environment.hasInfiniteFlight());
 	}
 	
 	/**
-	 * Set whether the user has infinite flight enabled. This has no effect if they do not have the permission tempfly.infinite
+	 * Set whether the user has infinite flight enabled.
 	 * @param enable enable infinite flight?
 	 */
 	public void setInfiniteFlight(boolean enable) {
@@ -237,8 +234,6 @@ public class FlightUser {
 		state.setInfinite(enable);
 		this.cachedActionBarText = null;
 		this.cachedActionBarSecond = -1;
-		updateList(false);
-		updateName(false);
 		if (!enable && V.actionBar && state.getTime() > 0) {
 			doActionBar();
 		} else if (!enable && state.getTime() <= 0) {
@@ -298,8 +293,6 @@ public class FlightUser {
 		} else if (p.isFlying()) {
 			manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, p.getUniqueId().toString()), true);
 		}
-		updateList(true);
-		updateName(true);
 		save();
 		if (initialTask != null) {initialTask.cancel();}
 		if (enforceTask != null) {enforceTask.cancel();}
@@ -364,8 +357,6 @@ public class FlightUser {
 		Runnable action = () -> {
 			if (!p.isOnline()) return;
 			GameMode m = p.getGameMode();
-			updateList(true);
-			updateName(true);
 			// Fixes a weird bug where fall damage accumulates through flight and damages even when 1 block off the ground.
 			if (p.isFlying()) {p.setFallDistance(0);}
 			if (m == GameMode.CREATIVE && V.creativeTimer) {
@@ -727,43 +718,22 @@ public class FlightUser {
 	}
 	
 	public String getListPlaceholder() {
-		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.listPlaceholderOn : V.listPlaceholderOff)
-				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", listName), state.getTime(), hasInfiniteFlight());
+		return (p.isFlying() && hasFlightEnabled()) ? "<#00f878>[Fly]</#00f878>" : "";
 	}
 	
 	public String getTagPlaceholder() {
-		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.tagPlaceholderOn : V.tagPlaceholderOff)
-				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight());
-	}
-	
-	private void updateList(boolean reset) {
-		if (!V.list) {return;}
-		p.setPlayerListName(!p.isFlying() || reset
-				? listName : timeManager.regexString(V.listName
-						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight()));
-	}
-	
-	private void updateName(boolean reset) {
-		if (!V.tag) {return;}
-		p.setDisplayName(!p.isFlying() || reset
-				? tagName : timeManager.regexString(V.tagName
-						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), state.getTime(), hasInfiniteFlight()));
+		return (p.isFlying() && hasFlightEnabled()) ? "<#00f878>[Fly]</#00f878>" : "";
 	}
 	
 	private String cachedActionBarText;
 	private long cachedActionBarSecond = -1;
 
 	public void doActionBar() {
-		if (p == null || !p.isOnline()) return;
-		boolean inf = hasInfiniteFlight();
-		long roundedSec = inf ? -999999L : (long) Math.ceil(state.getTime());
+		if (p == null || !p.isOnline() || hasInfiniteFlight()) return;
+		long roundedSec = (long) Math.ceil(state.getTime());
 		if (cachedActionBarText == null || cachedActionBarSecond != roundedSec) {
 			cachedActionBarSecond = roundedSec;
-			cachedActionBarText = timeManager.regexString(V.actionText, getTime(), inf);
+			cachedActionBarText = timeManager.regexString(V.actionText, getTime(), false);
 		}
 		p.sendActionBar(cachedActionBarText);
 	}
@@ -959,12 +929,8 @@ public class FlightUser {
 			return;
 		}
 		state.addIdleTicks(deltaTicks);
-		doIdentifier();
 		
 		if (hasInfiniteFlight()) {
-			if (V.actionBar && p.isFlying()) {
-				doActionBar();
-			}
 			return;
 		}
 		
@@ -1024,17 +990,6 @@ public class FlightUser {
 			return false;
 		}
 		return doIdleCheck();
-	}
-
-	private void doIdentifier() {
-		if (!hasFlightEnabled()) {
-			return;
-		}
-		if ((previouslyFlying && !p.isFlying()) || (!previouslyFlying && p.isFlying())) {
-			updateList(!p.isFlying());
-			updateName(!p.isFlying());	
-		}
-		previouslyFlying = p.isFlying();
 	}
 
 	private boolean doIdleCheck() {

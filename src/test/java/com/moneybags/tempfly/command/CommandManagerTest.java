@@ -30,7 +30,6 @@ public class CommandManagerTest {
         assertEquals("bypass", CommandType.BYPASS.getBase());
         assertEquals("toggle", CommandType.FLY.getBase());
         assertEquals("help", CommandType.HELP.getBase());
-        assertEquals("infinite", CommandType.INFINITE.getBase());
         assertEquals("pay", CommandType.PAY.getBase());
         assertEquals("speed", CommandType.SPEED.getBase());
         assertEquals("time", CommandType.TIME.getBase());

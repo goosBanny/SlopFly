@@ -1,19 +1,24 @@
+# ==============================================================================
+#                               TempFly Messages & Language
+# ==============================================================================
+# Supports modern MiniMessage formatting (<color>, <gradient:#color1:#color2>, <bold>, etc.)
+# ==============================================================================
+
 system:
-  prefix: "<#4FD2FC><bold>FLIGHT</bold></gradient> <dark_gray>▶</dark_gray>"
+  prefix: "<#4FD2FC><bold>FLIGHT</bold></#4FD2FC> <dark_gray>▶</dark_gray>"
   reload: "{PREFIX} <#00f878>Configuration, aesthetic settings, and data repositories reloaded successfully.</#00f878>"
   help:
-    - " <#4FD2FC><bold>TEMPLY FLIGHT HELP</bold></gradient>"
+    - " <#4FD2FC><bold>TEMPFLY FLIGHT HELP</bold></#4FD2FC>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf</white> <dark_gray>|</dark_gray> <gray>Toggle your temporary flight mode</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf time [player]</white> <dark_gray>|</dark_gray> <gray>Check flight balance and remaining time</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf pay <player> <time></white> <dark_gray>|</dark_gray> <gray>Transfer flight time to another player</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf speed <amount> [player]</white> <dark_gray>|</dark_gray> <gray>Adjust flight speed</gray>"
   help_extended:
-    - " <#4FD2FC><bold>ADMINISTRATION COMMANDS</bold></gradient>"
+    - " <#4FD2FC><bold>ADMINISTRATION COMMANDS</bold></#4FD2FC>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf give <player> <time></white> <dark_gray>|</dark_gray> <gray>Grant flight time to a player</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf giveall <time></white> <dark_gray>|</dark_gray> <gray>Grant flight time to all online players</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf remove <player> <time></white> <dark_gray>|</dark_gray> <gray>Deduct flight time from a player</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf set <player> <time></white> <dark_gray>|</dark_gray> <gray>Set exact flight balance for a player</gray>"
-    - " <#4FD2FC>●</#4FD2FC> <white>/tf infinite [player]</white> <dark_gray>|</dark_gray> <gray>Toggle unlimited flight mode</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf bypass [player]</white> <dark_gray>|</dark_gray> <gray>Toggle requirement bypass mode</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf settrail <trail> [player]</white> <dark_gray>|</dark_gray> <gray>Set cosmetic particle flight trail</gray>"
     - " <#4FD2FC>●</#4FD2FC> <white>/tf trailremove [player]</white> <dark_gray>|</dark_gray> <gray>Clear cosmetic particle flight trail</gray>"
@@ -58,14 +63,14 @@ general:
     daily_login: "{PREFIX} <gray>You received your daily flight bonus of <#00f878>{FORMATTED_TIME}</#00f878>!</gray>"
 
   info:
-    header: "<#4FD2FC><strikethrough>========================================</strikethrough></gradient>"
+    header: "<#4FD2FC><strikethrough>========================================</strikethrough></#4FD2FC>"
     player: " <#4FD2FC>●</#4FD2FC> <gray>Player:</gray> <yellow>{PLAYER}</yellow>"
     infinite: " <#4FD2FC>●</#4FD2FC> <gray>Status:</gray> <#00f878>Infinite Flight Enabled</#00f878>"
     days: " <#4FD2FC>●</#4FD2FC> <gray>Days:</gray> <yellow>{DAYS}</yellow>"
     hours: " <#4FD2FC>●</#4FD2FC> <gray>Hours:</gray> <yellow>{HOURS}</yellow>"
     minutes: " <#4FD2FC>●</#4FD2FC> <gray>Minutes:</gray> <yellow>{MINUTES}</yellow>"
     seconds: " <#4FD2FC>●</#4FD2FC> <gray>Seconds:</gray> <yellow>{SECONDS}</yellow>"
-    footer: "<#4FD2FC><strikethrough>========================================</strikethrough></gradient>"
+    footer: "<#4FD2FC><strikethrough>========================================</strikethrough></#4FD2FC>"
 
   fly:
     enabled_other: "{PREFIX} <gray>Flight enabled for <white>{PLAYER}</white>.</gray>"
@@ -81,8 +86,6 @@ general:
     already_disabled: "{PREFIX} <yellow>Your flight is already inactive!</yellow>"
     idle_drop: "{PREFIX} <red>Flight disabled due to inactivity.</red>"
     idle: "{PREFIX} <yellow>You are now marked as idle.</yellow>"
-    infinite_enabled: "{PREFIX} <#00f878>Infinite flight mode activated!</#00f878>"
-    infinite_disabled: "{PREFIX} <red>Infinite flight mode deactivated.</red>"
     bypass_enabled: "{PREFIX} <#00f878>Flight requirement bypass mode activated!</#00f878>"
     bypass_disabled: "{PREFIX} <red>Flight requirement bypass mode deactivated.</red>"
 
@@ -100,8 +103,26 @@ general:
       combat: "{PREFIX} <#00f878>Combat tag expired. Flight restored!</#00f878>"
 
 aesthetic:
+  # Action bar message displayed to active flyers
+  action_bar:
+    text: "<#4FD2FC>✈ <white>Flight:</white> <#4FD2FC>{FORMATTED_TIME}</#4FD2FC>"
+
+  # Flight expiration title/subtitle warnings
+  warning:
+    title: "<red><bold>WARNING!</bold></red>"
+    subtitle: "<yellow>You have <white>{FORMATTED_TIME}</white> of flight remaining!</yellow>"
+
+  # Cosmetic particle trail messages
+  trail:
+    removed_self: "{PREFIX} <gray>Your particle trail was removed.</gray>"
+    removed_other: "{PREFIX} <gray>Particle trail removed for <white>{PLAYER}</white>.</gray>"
+    set_self: "{PREFIX} <gray>Your particle trail was set to <#00f878>{PARTICLE}</#00f878>!</gray>"
+    set_other: "{PREFIX} <gray>Particle trail for <white>{PLAYER}</white> set to <#00f878>{PARTICLE}</#00f878>.</gray>"
+
+  # Custom symbols and PlaceholderAPI configuration
   symbols:
     infinity: "∞"
+
   placeholders:
     infinite_yes: "∞"
     infinite_no: ""
@@ -109,16 +130,12 @@ aesthetic:
     flying_no: "false"
     unknown_user: "0s"
     invalid: ""
-  featherboard:
-    days: "<yellow>{DAYS}</yellow><white>d</white> "
-    hours: "<yellow>{HOURS}</yellow><white>h</white> "
-    minutes: "<yellow>{MINUTES}</yellow><white>m</white> "
-    seconds: "<yellow>{SECONDS}</yellow><white>s</white> "
-  trail:
-    removed_self: "{PREFIX} <gray>Your particle trail was removed.</gray>"
-    removed_other: "{PREFIX} <gray>Particle trail removed for <white>{PLAYER}</white>.</gray>"
-    set_self: "{PREFIX} <gray>Your particle trail was set to <#00f878>{PARTICLE}</#00f878>!</gray>"
-    set_other: "{PREFIX} <gray>Particle trail for <white>{PLAYER}</white> set to <#00f878>{PARTICLE}</#00f878>.</gray>"
+    # Granular time formatting for placeholders (%tempfly_time_formatted%) and {FORMATTED_TIME}
+    time:
+      days: "<yellow>{DAYS}</yellow><gray>d</gray> "
+      hours: "<yellow>{HOURS}</yellow><gray>h</gray> "
+      minutes: "<yellow>{MINUTES}</yellow><gray>m</gray> "
+      seconds: "<yellow>{SECONDS}</yellow><gray>s</gray>"
 
 command:
   unit:
@@ -181,9 +198,6 @@ command:
     help:
       - "help"
       - "commands"
-    infinite:
-      - "infinite"
-      - "inf"
     pay:
       - "pay"
       - "send"

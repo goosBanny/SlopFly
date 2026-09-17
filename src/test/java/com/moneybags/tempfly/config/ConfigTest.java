@@ -68,13 +68,13 @@ public class ConfigTest {
 	public void testAestheticConfigSymbols() {
 		YamlConfiguration configYaml = new YamlConfiguration();
 		configYaml.set("aesthetic.action_bar.enabled", true);
-		configYaml.set("aesthetic.action_bar.text", "<gold>Flight: <yellow>{FORMATTED_TIME}");
-		configYaml.set("aesthetic.identifier.particles.enabled", true);
-		configYaml.set("aesthetic.identifier.particles.type", "FLAME");
-		configYaml.set("aesthetic.identifier.tab_list.enabled", true);
-		configYaml.set("aesthetic.identifier.tab_list.name", "&a[FLY] {PLAYER}");
+		configYaml.set("aesthetic.particles.enabled", true);
+		configYaml.set("aesthetic.particles.type", "FLAME");
 
 		YamlConfiguration langYaml = new YamlConfiguration();
+		langYaml.set("aesthetic.action_bar.text", "<gold>Flight: <yellow>{FORMATTED_TIME}");
+		langYaml.set("aesthetic.warning.title", "<red>ALERT");
+		langYaml.set("aesthetic.warning.subtitle", "<yellow>Time low!");
 		langYaml.set("aesthetic.symbols.infinity", "INF");
 		langYaml.set("aesthetic.placeholders.infinite_yes", "UNLIMITED");
 		langYaml.set("aesthetic.placeholders.infinite_no", "TIMED");
@@ -82,21 +82,29 @@ public class ConfigTest {
 		langYaml.set("aesthetic.placeholders.flying_no", "NO");
 		langYaml.set("aesthetic.placeholders.unknown_user", "N/A");
 		langYaml.set("aesthetic.placeholders.invalid", "ERR");
+		langYaml.set("aesthetic.placeholders.time.days", "{DAYS} days ");
+		langYaml.set("aesthetic.placeholders.time.hours", "{HOURS} hrs ");
+		langYaml.set("aesthetic.placeholders.time.minutes", "{MINUTES} mins ");
+		langYaml.set("aesthetic.placeholders.time.seconds", "{SECONDS} secs");
 
 		AestheticConfig config = AestheticConfig.from(configYaml, langYaml);
 
 		assertTrue(config.actionBar());
 		assertEquals("<gold>Flight: <yellow>{FORMATTED_TIME}", config.actionText());
+		assertEquals("<red>ALERT", config.warningTitle());
+		assertEquals("<yellow>Time low!", config.warningSubtitle());
 		assertEquals("INF", config.infinitySymbol());
 		assertTrue(config.particles());
 		assertEquals("FLAME", config.particleType());
-		assertTrue(config.listDynamic());
-		assertEquals("&a[FLY] {PLAYER}", config.listName());
 		assertEquals("UNLIMITED", config.placeholderInfiniteYes());
 		assertEquals("TIMED", config.placeholderInfiniteNo());
 		assertEquals("YES", config.placeholderFlyingYes());
 		assertEquals("NO", config.placeholderFlyingNo());
 		assertEquals("N/A", config.placeholderUnknownUser());
 		assertEquals("ERR", config.placeholderInvalid());
+		assertEquals("{DAYS} days ", config.placeholderTimeDays());
+		assertEquals("{HOURS} hrs ", config.placeholderTimeHours());
+		assertEquals("{MINUTES} mins ", config.placeholderTimeMinutes());
+		assertEquals("{SECONDS} secs", config.placeholderTimeSeconds());
 	}
 }

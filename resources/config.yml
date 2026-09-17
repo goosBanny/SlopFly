@@ -1,43 +1,9 @@
-##======================================================================================##
-#|                                                                                      |#
-#|                ,--------.                       ,------.,--.                         |# 
-#|                '--.  .--',---. ,--,--,--. ,---. |  .---'|  |,--. ,--.                |# 
-#|                   |  |  | .-. :|        || .-. ||  `--, |  | \  '  /                 |# 
-#|                   |  |  \   --.|  |  |  || '-' '|  |`   |  |  \   '                  |# 
-#|                   `--'   `----'`--`--`--'|  |-' `--'    `--'.-'  /                   |# 
-#|                                          `--'               `---'                    |#
-#|                                                                                      |#
-##--------------------------------------------------------------------------------------##
-#|                                                                                      |#
-#|                                       Author                                         |#
-#|                                  =---=------=---=                                    |#
-#|                                     Chief Beef                                       |#
-#|                                                                                      |#
-##--------------------------------------------------------------------------------------##
-#|                                                                                      |#
-#|                            <--Commands & Permissions-->                              |#
-#|                                                                                      |#
-#|    https://github.com/ChiefMoneyBags/TempFly/blob/Master/permissions.yml             |#
-#|                                                                                      |#
-##--------------------------------------------------------------------------------------##
-#|                                                                                      |#
-#|                              Time Placeholder Usage                                  |#
-#|                                                                                      |#
-#|                                    Single Units                                      |#
-#|                        {SECONDS} {MINUTES} {HOURS} {DAYS}                            |#
-#|                        ----------------------------------                            |#
-#|  Single unit placeholders will show the amount of time for only the unit specified   |#
-#|    If a player has 65 secs of time {SECONDS} will be 5s and {MINUTES} will be 1m     |#
-#|                                                                                      |#
-#|                                  Formatted Time                                      |#
-#|                                 {TIME_FORMATTED}                                     |#
-#|                        ----------------------------------                            |#
-#|      Formatted time only includes time units currently applicable to the player      |#
-#|         It does not display zeroes in between units like this [1d 0h 0m 1s]          |#
-#|            If a player has 86401 seconds of time it will display [1d 1s]             |#
-#|                                                                                      |#
-##======================================================================================##
-
+# ==============================================================================
+#                               TempFly Configuration
+# ==============================================================================
+# Modern temporary flight management plugin for Spigot / Paper servers.
+# Commands & Permissions: https://github.com/ChiefMoneyBags/TempFly
+# ==============================================================================
 
 system:
   # Interval in minutes between automatic data persistence sweeps
@@ -120,7 +86,7 @@ general:
 
   time:
     # Allow players to send flight time to other players via /tf pay
-    payable: true
+    payable: false
     max:
       # Maximum flight balance in seconds (-1 for unlimited)
       base: -1
@@ -178,39 +144,29 @@ general:
     structure_proximity: true
 
 aesthetic:
-  identifier:
-    tab_list:
-      enabled: false
-      name: "<#4FD2FC>✈</gradient> {OLD_TAG}"
-      placeholder:
-        enabled: "<#00f878>[Fly]</#00f878>"
-        disabled: ""
-
-    name_tag:
-      enabled: false
-      name: "<#4FD2FC>✈</gradient> {OLD_TAG}"
-      placeholder:
-        enabled: "<#00f878>[Fly]</#00f878>"
-        disabled: ""
-
-    particles:
-      enabled: true
-      type: 'VILLAGER_HAPPY'
-      display_by_default: true
-      hide_vanish: true
+  particles:
+    # Particle trail display while flying
+    enabled: false
+    # Particle type to display
+    type: 'VILLAGER_HAPPY'
+    # Whether particle trails are shown by default without /tf settrail
+    display_by_default: false
+    # Hide particle trail if the player is vanished
+    hide_vanish: true
 
   warning:
+    # Enable title/subtitle warnings when flight time is running low (messages configured in lang.yml)
     enabled: true
-    title: "<red><bold>WARNING!</bold></red>"
-    subtitle: "<yellow>You have <white>{FORMATTED_TIME}</white> of flight remaining!</yellow>"
+    # Time milestones in seconds to trigger warnings
     seconds:
       - 30
       - 15
       - 5
 
   action_bar:
+    # Display remaining flight time on the action bar while flying (message configured in lang.yml)
+    # Automatically hidden when a player has infinite flight permission (tempfly.infinite)
     enabled: true
-    text: "<#4FD2FC>✈ Flight:</gradient> <white>{FORMATTED_TIME}</white>"
 
 other:
   # Multiplier for flight balance decay in specific worlds or regions

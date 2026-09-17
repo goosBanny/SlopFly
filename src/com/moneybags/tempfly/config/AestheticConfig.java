@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 public record AestheticConfig(
 		boolean actionBar,
 		String actionText,
+		boolean warningEnabled,
 		String warningTitle,
 		String warningSubtitle,
 		List<Long> warningTimes,
@@ -15,47 +16,43 @@ public record AestheticConfig(
 		String particleType,
 		boolean particleDefault,
 		String infinitySymbol,
-		boolean listDynamic,
-		String listName,
-		boolean tagDynamic,
-		String tagName,
 		String placeholderInfiniteYes,
 		String placeholderInfiniteNo,
 		String placeholderFlyingYes,
 		String placeholderFlyingNo,
 		String placeholderUnknownUser,
-		String placeholderInvalid
+		String placeholderInvalid,
+		String placeholderTimeDays,
+		String placeholderTimeHours,
+		String placeholderTimeMinutes,
+		String placeholderTimeSeconds
 ) {
 	public static AestheticConfig from(FileConfiguration config, FileConfiguration lang) {
 		boolean actionBar = config.getBoolean("aesthetic.action_bar.enabled", true);
-		String actionText = config.getString("aesthetic.action_bar.text", "&6Flight meter&7: {FORMATTED_TIME}");
+		String actionText = lang != null && lang.contains("aesthetic.action_bar.text")
+				? lang.getString("aesthetic.action_bar.text")
+				: config.getString("aesthetic.action_bar.text", "<#4FD2FC>✈ <white>Flight: <#4FD2FC>{FORMATTED_TIME}");
 
 		boolean warningEnabled = config.getBoolean("aesthetic.warning.enabled", true);
-		String warningTitle = config.getString("aesthetic.warning.title", "&cWarning!");
-		String warningSubtitle = config.getString("aesthetic.warning.subtitle", "&eYou have {FORMATTED_TIME} remaining!");
+		String warningTitle = lang != null && lang.contains("aesthetic.warning.title")
+				? lang.getString("aesthetic.warning.title")
+				: config.getString("aesthetic.warning.title", "<red><bold>WARNING!</bold></red>");
+		String warningSubtitle = lang != null && lang.contains("aesthetic.warning.subtitle")
+				? lang.getString("aesthetic.warning.subtitle")
+				: config.getString("aesthetic.warning.subtitle", "<yellow>You have <white>{FORMATTED_TIME}</white> of flight remaining!</yellow>");
 		List<Long> warningTimes = config.getLongList("aesthetic.warning.seconds");
 
-		boolean particles = config.contains("aesthetic.identifier.particles.enabled")
-				? config.getBoolean("aesthetic.identifier.particles.enabled")
-				: config.getBoolean("aesthetic.particles.appearance.enabled", true);
-		String particleType = config.contains("aesthetic.identifier.particles.type")
-				? config.getString("aesthetic.identifier.particles.type", "VILLAGER_HAPPY")
-				: config.getString("aesthetic.particles.appearance.type", "VILLAGER_HAPPY");
-		boolean particleDefault = config.contains("aesthetic.identifier.particles.display_by_default")
-				? config.getBoolean("aesthetic.identifier.particles.display_by_default")
-				: config.getBoolean("aesthetic.particles.appearance.default", false);
+		boolean particles = config.contains("aesthetic.particles.enabled")
+				? config.getBoolean("aesthetic.particles.enabled")
+				: config.getBoolean("aesthetic.identifier.particles.enabled", false);
+		String particleType = config.contains("aesthetic.particles.type")
+				? config.getString("aesthetic.particles.type", "VILLAGER_HAPPY")
+				: config.getString("aesthetic.identifier.particles.type", "VILLAGER_HAPPY");
+		boolean particleDefault = config.contains("aesthetic.particles.display_by_default")
+				? config.getBoolean("aesthetic.particles.display_by_default")
+				: config.getBoolean("aesthetic.identifier.particles.display_by_default", false);
 
 		String infinitySymbol = lang != null ? lang.getString("aesthetic.symbols.infinity", "∞") : "∞";
-
-		boolean listDynamic = config.contains("aesthetic.identifier.tab_list.enabled")
-				? config.getBoolean("aesthetic.identifier.tab_list.enabled")
-				: config.getBoolean("aesthetic.identifier.tab_list.dynamic", false);
-		String listName = config.getString("aesthetic.identifier.tab_list.name", "{PLAYER}");
-
-		boolean tagDynamic = config.contains("aesthetic.identifier.name_tag.enabled")
-				? config.getBoolean("aesthetic.identifier.name_tag.enabled")
-				: config.getBoolean("aesthetic.identifier.name_tag.dynamic", false);
-		String tagName = config.getString("aesthetic.identifier.name_tag.name", "{PLAYER}");
 
 		String placeholderInfiniteYes = lang != null ? lang.getString("aesthetic.placeholders.infinite_yes", infinitySymbol) : infinitySymbol;
 		String placeholderInfiniteNo = lang != null ? lang.getString("aesthetic.placeholders.infinite_no", "") : "";
@@ -64,14 +61,24 @@ public record AestheticConfig(
 		String placeholderUnknownUser = lang != null ? lang.getString("aesthetic.placeholders.unknown_user", "0s") : "0s";
 		String placeholderInvalid = lang != null ? lang.getString("aesthetic.placeholders.invalid", "") : "";
 
+		String placeholderTimeDays = lang != null ? lang.getString("aesthetic.placeholders.time.days",
+				lang.getString("aesthetic.featherboard.days", "{DAYS}d ")) : "{DAYS}d ";
+		String placeholderTimeHours = lang != null ? lang.getString("aesthetic.placeholders.time.hours",
+				lang.getString("aesthetic.featherboard.hours", "{HOURS}h ")) : "{HOURS}h ";
+		String placeholderTimeMinutes = lang != null ? lang.getString("aesthetic.placeholders.time.minutes",
+				lang.getString("aesthetic.featherboard.minutes", "{MINUTES}m ")) : "{MINUTES}m ";
+		String placeholderTimeSeconds = lang != null ? lang.getString("aesthetic.placeholders.time.seconds",
+				lang.getString("aesthetic.featherboard.seconds", "{SECONDS}s")) : "{SECONDS}s";
+
 		return new AestheticConfig(
-				actionBar, actionText, warningTitle, warningSubtitle,
+				actionBar, actionText, warningEnabled, warningTitle, warningSubtitle,
 				Collections.unmodifiableList(warningTimes),
 				particles, particleType, particleDefault, infinitySymbol,
-				listDynamic, listName, tagDynamic, tagName,
 				placeholderInfiniteYes, placeholderInfiniteNo,
 				placeholderFlyingYes, placeholderFlyingNo,
-				placeholderUnknownUser, placeholderInvalid
+				placeholderUnknownUser, placeholderInvalid,
+				placeholderTimeDays, placeholderTimeHours,
+				placeholderTimeMinutes, placeholderTimeSeconds
 		);
 	}
 }

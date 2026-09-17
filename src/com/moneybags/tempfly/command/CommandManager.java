@@ -37,13 +37,11 @@ import com.moneybags.tempfly.command.admin.CmdTrailSet;
 import com.moneybags.tempfly.command.player.CmdBypass;
 import com.moneybags.tempfly.command.player.CmdFly;
 import com.moneybags.tempfly.command.player.CmdHelp;
-import com.moneybags.tempfly.command.player.CmdInfinite;
 import com.moneybags.tempfly.command.player.CmdPay;
 import com.moneybags.tempfly.command.player.CmdSpeed;
 import com.moneybags.tempfly.command.player.CmdTime;
 import com.moneybags.tempfly.command.sub.BypassSubCommand;
 import com.moneybags.tempfly.command.sub.FlySubCommand;
-import com.moneybags.tempfly.command.sub.InfiniteSubCommand;
 import com.moneybags.tempfly.command.sub.ReloadSubCommand;
 import com.moneybags.tempfly.command.sub.SpeedSubCommand;
 import com.moneybags.tempfly.command.sub.TimeSubCommand;
@@ -161,7 +159,6 @@ public class CommandManager {
 		router.register(new FlySubCommand(tempfly));
 		router.register(new TimeSubCommand(tempfly));
 		router.register(new SpeedSubCommand(tempfly));
-		router.register(new InfiniteSubCommand(tempfly));
 		router.register(new BypassSubCommand(tempfly));
 		router.register(new ReloadSubCommand(tempfly));
 
@@ -595,7 +592,6 @@ public class CommandManager {
 					);
 					break;
 
-				case INFINITE:
 				case BYPASS:
 					sub.executes(ctx -> {
 						executeCommand(ctx.getSource().getSender(), new String[]{base});
@@ -703,7 +699,6 @@ public class CommandManager {
 		BYPASS(CmdBypass::new, "bypass"),
 		FLY(CmdFly::new, "toggle"),
 		HELP(CmdHelp::new, "help"),
-		INFINITE(CmdInfinite::new, "infinite"),
 		PAY(CmdPay::new, "pay"),
 		SPEED(CmdSpeed::new, "speed"),
 		TIME(CmdTime::new, "time"),
@@ -747,8 +742,6 @@ public class CommandManager {
 				return U.hasPermission(s, "tempfly.toggle.self") || U.hasPermission(s, "tempfly.toggle.other");
 			case HELP:
 				return U.hasPermission(s, "tempfly.help") || U.hasPermission(s, "tempfly.help.admin");
-			case INFINITE:
-				return U.hasPermission(s, "tempfly.infinite.toggle");
 			case PAY:
 				return V.payable && U.hasPermission(s, "tempfly.pay");
 			case SPEED:
