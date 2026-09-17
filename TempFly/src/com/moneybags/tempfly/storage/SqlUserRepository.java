@@ -351,7 +351,13 @@ public class SqlUserRepository implements UserRepository {
 
 	@Override
 	public void flush() {
-		// All writes are direct to DB or through executor. Await queued tasks if any.
+		if (executor != null && !executor.isShutdown()) {
+			try {
+				executor.submit(() -> {}).get(5, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				Console.warn("Timed out or interrupted waiting for SQL repository flush: " + e.getMessage());
+			}
+		}
 	}
 
 	@Override

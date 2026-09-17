@@ -32,7 +32,6 @@ public class CommandManagerTest {
         assertEquals("help", CommandType.HELP.getBase());
         assertEquals("infinite", CommandType.INFINITE.getBase());
         assertEquals("pay", CommandType.PAY.getBase());
-        assertEquals("shop", CommandType.SHOP.getBase());
         assertEquals("speed", CommandType.SPEED.getBase());
         assertEquals("time", CommandType.TIME.getBase());
         assertEquals("trails", CommandType.TRAILS.getBase());

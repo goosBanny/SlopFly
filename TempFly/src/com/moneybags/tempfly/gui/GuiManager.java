@@ -66,6 +66,14 @@ public class GuiManager implements Listener {
 			session.endSession();
 		}
 	}
+
+	@EventHandler (priority = EventPriority.MONITOR)
+	public void onKick(org.bukkit.event.player.PlayerKickEvent e) {
+		GuiSession session = sessions.remove(e.getPlayer().getUniqueId());
+		if (session != null) {
+			session.endSession();
+		}
+	}
 	
 	@EventHandler (priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void on(InventoryCloseEvent e) {

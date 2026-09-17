@@ -103,6 +103,10 @@ public class FallSafetyService implements Listener {
 		return uuid != null && activeProtections.containsKey(uuid);
 	}
 
+	public boolean isProtected(UUID uuid) {
+		return hasProtection(uuid);
+	}
+
 	/**
 	 * Clears all active fall protections (e.g. on plugin disable).
 	 */

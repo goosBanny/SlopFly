@@ -49,6 +49,10 @@ public class FlightState {
 		return playerId;
 	}
 
+	public UUID getUuid() {
+		return playerId;
+	}
+
 	public double getTime() {
 		return time;
 	}

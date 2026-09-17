@@ -40,7 +40,6 @@ import com.moneybags.tempfly.command.player.CmdFly;
 import com.moneybags.tempfly.command.player.CmdHelp;
 import com.moneybags.tempfly.command.player.CmdInfinite;
 import com.moneybags.tempfly.command.player.CmdPay;
-import com.moneybags.tempfly.command.player.CmdShop;
 import com.moneybags.tempfly.command.player.CmdSpeed;
 import com.moneybags.tempfly.command.player.CmdTime;
 import com.moneybags.tempfly.command.sub.BypassSubCommand;
@@ -627,7 +626,6 @@ public class CommandManager {
 					);
 					break;
 
-				case SHOP:
 				case TRAILS:
 				case HELP:
 				case RELOAD:
@@ -709,7 +707,6 @@ public class CommandManager {
 		HELP(CmdHelp::new, "help"),
 		INFINITE(CmdInfinite::new, "infinite"),
 		PAY(CmdPay::new, "pay"),
-		SHOP(CmdShop::new, "shop"),
 		SPEED(CmdSpeed::new, "speed"),
 		TIME(CmdTime::new, "time"),
 		TRAILS(CmdTrails::new, "trails"),
@@ -728,12 +725,7 @@ public class CommandManager {
 		}
 
 		public boolean isEnabled(TempFly tempfly) {
-			switch (this) {
-			case SHOP:
-				return V.shop;
-			default:
-				return true;
-			}
+			return true;
 		}
 
 		public boolean hasPermission(TempFly tempfly, CommandSender s) {
@@ -762,8 +754,6 @@ public class CommandManager {
 				return U.hasPermission(s, "tempfly.infinite.toggle");
 			case PAY:
 				return V.payable && U.hasPermission(s, "tempfly.pay");
-			case SHOP:
-				return V.shop && tempfly.getHookManager().getEconomy() != null && U.hasPermission(s, "tempfly.shop");
 			case SPEED:
 				return U.hasPermission(s, "tempfly.speed.self") || U.hasPermission(s, "tempfly.speed.other");
 			case TIME:

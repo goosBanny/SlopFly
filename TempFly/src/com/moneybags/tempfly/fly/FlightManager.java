@@ -323,6 +323,9 @@ public class FlightManager implements Listener, Reloadable {
 	}
 
 	public void removeUser(Player p, boolean reload) {
+		if (p == null) {
+			return;
+		}
 		removeUser(p.getUniqueId(), reload);
 	}
 
@@ -344,8 +347,8 @@ public class FlightManager implements Listener, Reloadable {
 			flightTickTask = null;
 		}
 		stopMovementTask();
-		for (FlightUser user : users.values()) {
-			removeUser(user.getPlayer(), true);
+		for (UUID u : new java.util.ArrayList<>(users.keySet())) {
+			removeUser(u, true);
 		}
 	}
 
@@ -743,6 +746,12 @@ public class FlightManager implements Listener, Reloadable {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
 	public void onQuit(PlayerQuitEvent e) {
+		Player p = e.getPlayer();
+		removeUser(p, false);
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+	public void onKick(org.bukkit.event.player.PlayerKickEvent e) {
 		Player p = e.getPlayer();
 		removeUser(p, false);
 	}

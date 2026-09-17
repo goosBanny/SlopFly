@@ -118,24 +118,24 @@ public class RootCommandRouterTest {
 		FakeSubCommand cmd1 = new FakeSubCommand("speed", Collections.singletonList("sp"), null, true);
 		cmd1.completions = Arrays.asList("1", "2", "reset");
 
-		FakeSubCommand cmd2 = new FakeSubCommand("shop", Collections.emptyList(), null, true);
+		FakeSubCommand cmd2 = new FakeSubCommand("status", Collections.emptyList(), null, true);
 
 		router.register(cmd1);
 		router.register(cmd2);
 
 		FakeConsoleSender sender = new FakeConsoleSender();
 
-		// Top-level completion with "s" prefix -> should match "speed", "sp", "shop"
+		// Top-level completion with "s" prefix -> should match "speed", "sp", "status"
 		List<String> completions = router.tabComplete(sender, new String[]{"s"});
 		assertTrue(completions.contains("speed"));
 		assertTrue(completions.contains("sp"));
-		assertTrue(completions.contains("shop"));
+		assertTrue(completions.contains("status"));
 
 		// Top-level completion with "sp" prefix -> should match "speed", "sp"
 		completions = router.tabComplete(sender, new String[]{"sp"});
 		assertTrue(completions.contains("speed"));
 		assertTrue(completions.contains("sp"));
-		assertFalse(completions.contains("shop"));
+		assertFalse(completions.contains("status"));
 
 		// Subcommand-level completion delegation
 		List<String> subCompletions = router.tabComplete(sender, new String[]{"speed", "r"});

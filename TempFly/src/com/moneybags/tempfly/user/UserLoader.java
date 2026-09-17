@@ -85,7 +85,19 @@ public class UserLoader implements Runnable {
 		}
 		ready = true;
 		if (async) {
-			manager.addUser(Bukkit.getPlayer(u));
+			if (Bukkit.isPrimaryThread()) {
+				Player p = Bukkit.getPlayer(u);
+				if (p != null && p.isOnline()) {
+					manager.addUser(p);
+				}
+			} else if (manager.getTempFly() != null) {
+				Bukkit.getScheduler().runTask(manager.getTempFly(), () -> {
+					Player p = Bukkit.getPlayer(u);
+					if (p != null && p.isOnline()) {
+						manager.addUser(p);
+					}
+				});
+			}
 		}
 	}
 	

@@ -19,7 +19,6 @@ import com.moneybags.tempfly.aesthetic.particle.Particles;
 import com.moneybags.tempfly.command.CommandManager;
 import com.moneybags.tempfly.fly.FlightManager;
 import com.moneybags.tempfly.gui.GuiManager;
-import com.moneybags.tempfly.gui.pages.PageShop;
 import com.moneybags.tempfly.gui.pages.PageTrails;
 import com.moneybags.tempfly.hook.HookManager;
 import com.moneybags.tempfly.hook.TempFlyHook;
@@ -61,6 +60,7 @@ public class TempFly extends JavaPlugin {
 	private CommandManager commands;
 	private GuiManager gui;
 	private BukkitTask autosave;
+	private BukkitTask particleTask;
 	
 	public MessageService getMessageService() {
 		return messageService;
@@ -159,8 +159,12 @@ public class TempFly extends JavaPlugin {
 	private void initializeAesthetics() {
 		Particles.initialize(this);
 		
+		if (particleTask != null) {
+			particleTask.cancel();
+			particleTask = null;
+		}
 		if (V.particles) {
-			new ParticleTask(this).runTaskTimer(this, 0, 5);
+			particleTask = new ParticleTask(this).runTaskTimer(this, 0, 5);
 		}
 
 		if (Bukkit.getPluginManager().isPluginEnabled("MVdWPlaceholderAPI")) {
@@ -175,11 +179,18 @@ public class TempFly extends JavaPlugin {
 	
 	private void initializeGui() {
 		PageTrails.initialize(this);
-		PageShop.initialize(this);
 	}
 	
 	@Override
 	public void onDisable() {
+		if (particleTask != null) {
+			particleTask.cancel();
+			particleTask = null;
+		}
+		if (autosave != null) {
+			autosave.cancel();
+			autosave = null;
+		}
 		if (fallSafetyService != null) {
 			fallSafetyService.clearAll();
 		}
@@ -218,6 +229,7 @@ public class TempFly extends JavaPlugin {
 		Files.createFiles(this);
 		V.loadValues();
 		initializeGui();
+		initializeAesthetics();
 		
 		flight.onTempflyReload();
 		hooks.onTempflyReload();

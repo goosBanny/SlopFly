@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -121,16 +122,20 @@ public class FlightUser {
 	}
 	
 	public void save() {
-		Console.debug("", "-----< Save FlightUser: (" + p.getUniqueId().toString() + ") >-----");
+		UUID uuid = (p != null) ? p.getUniqueId() : state.getUuid();
+		Console.debug("", "-----< Save FlightUser: (" + uuid.toString() + ") >-----");
 		if (manager.getTempFly() != null) {
 			UserRepository repo = manager.getTempFly().getUserRepository();
 			if (repo != null) {
+				boolean loggedInFlight = hasFlightEnabled() || hasAutoFlyQueued();
+				boolean compatLoggedInFlight = !loggedInFlight && p != null && p.isFlying();
+				boolean damageProt = manager.getTempFly().getFallSafetyService() != null && manager.getTempFly().getFallSafetyService().isProtected(uuid);
 				repo.saveUser(new UserFlightData(
-						p.getUniqueId(),
+						uuid,
 						state.getTime(),
-						false,
-						false,
-						false,
+						loggedInFlight,
+						compatLoggedInFlight,
+						damageProt,
 						0L,
 						state.getTrail(),
 						state.isInfinite(),
@@ -140,7 +145,7 @@ public class FlightUser {
 			}
 			DataBridge bridge = manager.getTempFly().getDataBridge();
 			if (bridge != null) {
-				String u = p.getUniqueId().toString();
+				String u = uuid.toString();
 				bridge.manualCommit(
 						DataPointer.of(DataValue.PLAYER_TIME, u),
 						DataPointer.of(DataValue.PLAYER_DAILY_BONUS, u),
