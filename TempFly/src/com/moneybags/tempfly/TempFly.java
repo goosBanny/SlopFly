@@ -25,11 +25,15 @@ import com.moneybags.tempfly.hook.HookManager;
 import com.moneybags.tempfly.hook.TempFlyHook;
 import com.moneybags.tempfly.message.MessageService;
 import com.moneybags.tempfly.safety.FallSafetyService;
+import com.moneybags.tempfly.storage.UserRepository;
+import com.moneybags.tempfly.time.AsyncTimeParameters;
 import com.moneybags.tempfly.time.TimeManager;
-import com.moneybags.tempfly.util.AutoSave;
+import com.moneybags.tempfly.user.FlightUser;
 import com.moneybags.tempfly.util.Console;
 import com.moneybags.tempfly.util.ParticleTask;
+import com.moneybags.tempfly.util.U;
 import com.moneybags.tempfly.util.V;
+import com.moneybags.tempfly.util.AutoSave;
 import com.moneybags.tempfly.util.data.DataBridge;
 import com.moneybags.tempfly.util.data.Files;
 
@@ -51,6 +55,7 @@ public class TempFly extends JavaPlugin {
 	private FallSafetyService fallSafetyService;
 	private HookManager hooks;
 	private DataBridge bridge;
+	private UserRepository userRepository;
 	private FlightManager flight;
 	private TimeManager time;
 	private CommandManager commands;
@@ -71,6 +76,10 @@ public class TempFly extends JavaPlugin {
 	
 	public DataBridge getDataBridge() {
 		return bridge;
+	}
+
+	public UserRepository getUserRepository() {
+		return userRepository;
 	}
 	
 	public FlightManager getFlightManager() {
@@ -100,7 +109,8 @@ public class TempFly extends JavaPlugin {
 		V.loadValues();
 		
 		try {
-			this.bridge   = new DataBridge(this);
+			this.bridge = new DataBridge(this);
+			this.userRepository = UserRepository.create(this.bridge);
 		} catch (IOException | SQLException e1) {
 			e1.printStackTrace();
 			getServer().getPluginManager().disablePlugin(this);
@@ -182,6 +192,9 @@ public class TempFly extends JavaPlugin {
 		if (gui != null) {
 			gui.endAllSessions();
 		}
+		if (userRepository != null) {
+			userRepository.close();
+		}
 		if (bridge != null) {
 			bridge.onDisable();
 		}
@@ -198,6 +211,9 @@ public class TempFly extends JavaPlugin {
 		}
 		gui.endAllSessions();
 		
+		if (userRepository != null) {
+			userRepository.flush();
+		}
 		bridge.commitAll();
 		Files.createFiles(this);
 		V.loadValues();

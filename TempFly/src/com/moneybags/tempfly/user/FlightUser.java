@@ -29,6 +29,8 @@ import com.moneybags.tempfly.fly.RequirementProvider;
 import com.moneybags.tempfly.fly.RequirementProvider.InquiryType;
 import com.moneybags.tempfly.fly.result.FlightResult;
 import com.moneybags.tempfly.hook.region.CompatRegion;
+import com.moneybags.tempfly.storage.UserFlightData;
+import com.moneybags.tempfly.storage.UserRepository;
 import com.moneybags.tempfly.time.TimeManager;
 import com.moneybags.tempfly.util.Console;
 import com.moneybags.tempfly.util.U;
@@ -50,6 +52,11 @@ public class FlightUser {
 	
 	private BukkitTask initialTask, enforceTask;
 	private String listName, tagName;
+
+	public FlightUser(Player p, FlightManager manager, UserFlightData data) {
+		this(p, manager, data.getTime(), data.getTrail(), data.isInfinite(), data.isBypass(),
+				data.isLoggedInFlight(), data.isCompatLoggedInFlight(), data.getSpeed());
+	}
 
 	public FlightUser(Player p, FlightManager manager,
 			double time, String particle, boolean infinite, boolean bypass, boolean logged, boolean compatLogged,
@@ -115,18 +122,37 @@ public class FlightUser {
 	
 	public void save() {
 		Console.debug("", "-----< Save FlightUser: (" + p.getUniqueId().toString() + ") >-----");
-		DataBridge bridge = manager.getTempFly().getDataBridge();
-		String u = p.getUniqueId().toString();
-		bridge.manualCommit(
-				DataPointer.of(DataValue.PLAYER_TIME, u),
-				DataPointer.of(DataValue.PLAYER_DAILY_BONUS, u),
-				DataPointer.of(DataValue.PLAYER_DAMAGE_PROTECTION, u),
-				DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, u),
-				DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, u),
-				DataPointer.of(DataValue.PLAYER_TRAIL, u),
-				DataPointer.of(DataValue.PLAYER_INFINITE, u),
-				DataPointer.of(DataValue.PLAYER_BYPASS, u),
-				DataPointer.of(DataValue.PLAYER_SPEED, u));
+		if (manager.getTempFly() != null) {
+			UserRepository repo = manager.getTempFly().getUserRepository();
+			if (repo != null) {
+				repo.saveUser(new UserFlightData(
+						p.getUniqueId(),
+						state.getTime(),
+						false,
+						false,
+						false,
+						0L,
+						state.getTrail(),
+						state.isInfinite(),
+						state.isBypass(),
+						state.getSelectedSpeed()
+				));
+			}
+			DataBridge bridge = manager.getTempFly().getDataBridge();
+			if (bridge != null) {
+				String u = p.getUniqueId().toString();
+				bridge.manualCommit(
+						DataPointer.of(DataValue.PLAYER_TIME, u),
+						DataPointer.of(DataValue.PLAYER_DAILY_BONUS, u),
+						DataPointer.of(DataValue.PLAYER_DAMAGE_PROTECTION, u),
+						DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, u),
+						DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, u),
+						DataPointer.of(DataValue.PLAYER_TRAIL, u),
+						DataPointer.of(DataValue.PLAYER_INFINITE, u),
+						DataPointer.of(DataValue.PLAYER_BYPASS, u),
+						DataPointer.of(DataValue.PLAYER_SPEED, u));
+			}
+		}
 	}
 	
 	

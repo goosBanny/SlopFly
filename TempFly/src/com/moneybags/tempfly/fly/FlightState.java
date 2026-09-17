@@ -93,6 +93,10 @@ public class FlightState {
 		return bypass;
 	}
 
+	public boolean isBypass() {
+		return bypass;
+	}
+
 	public void setBypass(boolean bypass) {
 		this.bypass = bypass;
 	}

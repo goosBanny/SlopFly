@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import com.moneybags.tempfly.TempFly;
 import com.moneybags.tempfly.event.FlightUserInitializedEvent;
+import com.moneybags.tempfly.storage.UserRepository;
 import com.moneybags.tempfly.user.FlightUser;
 import com.moneybags.tempfly.util.Console;
 import com.moneybags.tempfly.util.DailyDate;
@@ -46,16 +47,34 @@ public class TimeManager implements Listener {
 	 */
 	private boolean alreadyThrown;
 	public double getTime(UUID u) {
-		FlightUser user = tempfly.getFlightManager().getUser(u);
-		if (user == null && tempfly.getDataBridge().hasSqlEnabled() && Bukkit.getServer().isPrimaryThread() && !alreadyThrown) {
+		FlightUser user = tempfly.getFlightManager() != null ? tempfly.getFlightManager().getUser(u) : null;
+		if (user != null) {
+			return user.getTime();
+		}
+		UserRepository repo = tempfly.getUserRepository();
+		if (repo != null) {
+			return repo.getUser(u).getTime();
+		}
+		if (tempfly.getDataBridge() != null && tempfly.getDataBridge().hasSqlEnabled() && Bukkit.getServer().isPrimaryThread() && !alreadyThrown) {
 			alreadyThrown = true;
 			try {throw new IllegalStateException("Invocation of getTime() for an offline player should be performed from an asychronous thread! It is not safe to access a database on the main server thread!");} catch (IllegalStateException e) {
 				e.printStackTrace();
 			}
 		}
 		DataBridge bridge = tempfly.getDataBridge();
-		// If user is not online the data needs pulled from the database. Otherwise get it from memory.
-		return user == null ? (double) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), 0d) : user.getTime();
+		return bridge != null ? (double) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), 0d) : 0.0;
+	}
+
+	public java.util.concurrent.CompletableFuture<Double> getTimeAsync(UUID u) {
+		FlightUser user = tempfly.getFlightManager() != null ? tempfly.getFlightManager().getUser(u) : null;
+		if (user != null) {
+			return java.util.concurrent.CompletableFuture.completedFuture(user.getTime());
+		}
+		UserRepository repo = tempfly.getUserRepository();
+		if (repo != null) {
+			return repo.getTime(u);
+		}
+		return java.util.concurrent.CompletableFuture.supplyAsync(() -> getTime(u));
 	}
 	
 	/**
@@ -63,21 +82,27 @@ public class TimeManager implements Listener {
 	 * If the user is online it will also update their FlightUser object with the new time
 	 * stages the new time to the DataBridge.
 	 * @param u the uuid of the player
-	 * @param seconds The new seconds
+	 * @param parameters The time parameters
 	 */
 	public void removeTime(UUID u, AsyncTimeParameters parameters) {
 		double seconds = parameters.getAmount();
 		if (seconds <= 0) {
 			return;
 		}
-		FlightUser user = tempfly.getFlightManager().getUser(Bukkit.getPlayer(u));
+		FlightUser user = tempfly.getFlightManager() != null ? tempfly.getFlightManager().getUser(Bukkit.getPlayer(u)) : null;
 		double bal = user == null ? parameters.getCurrentTime() : user.getTime();
 		double remaining = (((bal-seconds) >= 0) ? (bal-seconds) : 0);
 		
 		if (user != null) {
 			user.setTime(remaining);
 		} else {
-			tempfly.getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), remaining);
+			UserRepository repo = tempfly.getUserRepository();
+			if (repo != null) {
+				repo.adjustTime(u, -seconds, -1);
+			}
+			if (tempfly.getDataBridge() != null) {
+				tempfly.getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), remaining);
+			}
 		}
 	}
 	
@@ -86,14 +111,14 @@ public class TimeManager implements Listener {
 	 * If the user is online it will also update their FlightUser object with the new time
 	 * stages the new time to the DataBridge.
 	 * @param u the uuid of the player
-	 * @param seconds The seconds to add
+	 * @param parameters The time parameters
 	 */
 	public void addTime(UUID u, AsyncTimeParameters parameters) {
 		double seconds = parameters.getAmount();
 		if (seconds <= 0) {
 			return;
 		}
-		FlightUser user = tempfly.getFlightManager().getUser(Bukkit.getPlayer(u));
+		FlightUser user = tempfly.getFlightManager() != null ? tempfly.getFlightManager().getUser(Bukkit.getPlayer(u)) : null;
 		double maxTime = parameters.getMaxTime();
 		if (maxTime == -999) {
 			return;
@@ -109,7 +134,13 @@ public class TimeManager implements Listener {
 		if (user != null) {
 			user.setTime(remaining);
 		} else {
-			tempfly.getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), remaining);
+			UserRepository repo = tempfly.getUserRepository();
+			if (repo != null) {
+				repo.adjustTime(u, seconds, maxTime);
+			}
+			if (tempfly.getDataBridge() != null) {
+				tempfly.getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_TIME, u.toString()), remaining);
+			}
 		}
 	}
 	
@@ -118,14 +149,14 @@ public class TimeManager implements Listener {
 	 * If the user is online it will also update their FlightUser object with the new time
 	 * stages the new time to the DataBridge.
 	 * @param u the uuid of the player
-	 * @param seconds The new seconds
+	 * @param parameters The time parameters
 	 */
 	public void setTime(UUID u, AsyncTimeParameters parameters) {
 		double seconds = parameters.getAmount();
 		if (seconds < 0) {
 			seconds = 0;
 		}
-		FlightUser user = tempfly.getFlightManager().getUser(Bukkit.getPlayer(u));
+		FlightUser user = tempfly.getFlightManager() != null ? tempfly.getFlightManager().getUser(Bukkit.getPlayer(u)) : null;
 		double maxTime = parameters.getMaxTime();
 		if (maxTime == -999) {
 			return;
@@ -137,12 +168,15 @@ public class TimeManager implements Listener {
 		if (user != null) {
 			user.setTime(seconds);
 		} else {
-			if (tempfly.getDataBridge().hasSqlEnabled()) {
-				Console.warn("It is currently unsafe to alter player time for offline players while using MYSQL storage! The tempfly plugin currently does not sync player time between servers on a network. If this player is currently on a different server their time will not update and will be overwritten when they log off or switch servers.");
+			UserRepository repo = tempfly.getUserRepository();
+			if (repo != null) {
+				repo.setTime(u, seconds);
 			}
-			DataPointer pointer = DataPointer.of(DataValue.PLAYER_TIME, u.toString());
-			tempfly.getDataBridge().stageChange(pointer, seconds);
-			tempfly.getDataBridge().manualCommit(pointer);
+			if (tempfly.getDataBridge() != null) {
+				DataPointer pointer = DataPointer.of(DataValue.PLAYER_TIME, u.toString());
+				tempfly.getDataBridge().stageChange(pointer, seconds);
+				tempfly.getDataBridge().manualCommit(pointer);
+			}
 		}
 	}
 	

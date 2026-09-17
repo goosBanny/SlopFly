@@ -9,6 +9,8 @@ import org.bukkit.entity.Player;
 
 import com.moneybags.tempfly.aesthetic.particle.Particles;
 import com.moneybags.tempfly.fly.FlightManager;
+import com.moneybags.tempfly.storage.UserFlightData;
+import com.moneybags.tempfly.storage.UserRepository;
 import com.moneybags.tempfly.time.TimeManager;
 import com.moneybags.tempfly.util.data.DataBridge;
 import com.moneybags.tempfly.util.data.DataPointer;
@@ -42,30 +44,44 @@ public class UserLoader implements Runnable {
 	
 	@Override
 	public void run() {
-		final DataBridge bridge = manager.getTempFly().getDataBridge();
-		final TimeManager timeManager = manager.getTempFly().getTimeManager();
-		
-		if (bridge.hasSqlEnabled()) {
-			try (java.sql.Connection conn = bridge.getConnection();
-			     PreparedStatement st = conn.prepareStatement(bridge.getInsertIgnoreQuery("tempfly_data", "uuid", "?"))) {
-				st.setString(1, u.toString());
-				st.executeUpdate();
-			} catch (SQLException e) {
-				e.printStackTrace();
-				return;
+		final UserRepository repo = manager.getTempFly() != null ? manager.getTempFly().getUserRepository() : null;
+		if (repo != null) {
+			UserFlightData data = repo.getUser(u);
+			this.time = data.getTime();
+			this.particle = data.getTrail() != null ? data.getTrail() : Particles.loadTrail(u);
+			this.infinite = data.isInfinite();
+			this.bypass = data.isBypass();
+			this.logged = data.isLoggedInFlight();
+			this.compatLogged = data.isCompatLoggedInFlight();
+			this.selectedSpeed = data.getSpeed();
+			if (selectedSpeed <= 0 && selectedSpeed != -999D) {
+				selectedSpeed = -999D;
 			}
-		}
-		
-		
-		time = timeManager.getTime(u);
-		particle = Particles.loadTrail(u);
-		infinite = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_INFINITE, u.toString()), true); 
-		bypass = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_BYPASS, u.toString()), true);
-		logged = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, u.toString()), false);
-		compatLogged = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, u.toString()), false);
-		selectedSpeed = (double) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_SPEED, u.toString()), -999D);
-		if (selectedSpeed <= 0 && selectedSpeed != -999D) {
-			selectedSpeed = -999D;
+		} else {
+			final DataBridge bridge = manager.getTempFly() != null ? manager.getTempFly().getDataBridge() : null;
+			final TimeManager timeManager = manager.getTempFly() != null ? manager.getTempFly().getTimeManager() : null;
+			
+			if (bridge != null && bridge.hasSqlEnabled()) {
+				try (java.sql.Connection conn = bridge.getConnection();
+				     PreparedStatement st = conn.prepareStatement(bridge.getInsertIgnoreQuery("tempfly_data", "uuid", "?"))) {
+					st.setString(1, u.toString());
+					st.executeUpdate();
+				} catch (SQLException e) {
+					e.printStackTrace();
+					return;
+				}
+			}
+			
+			time = timeManager != null ? timeManager.getTime(u) : 0.0;
+			particle = Particles.loadTrail(u);
+			infinite = bridge != null ? (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_INFINITE, u.toString()), true) : true; 
+			bypass = bridge != null ? (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_BYPASS, u.toString()), true) : true;
+			logged = bridge != null ? (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, u.toString()), false) : false;
+			compatLogged = bridge != null ? (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, u.toString()), false) : false;
+			selectedSpeed = bridge != null ? (double) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_SPEED, u.toString()), -999D) : -999D;
+			if (selectedSpeed <= 0 && selectedSpeed != -999D) {
+				selectedSpeed = -999D;
+			}
 		}
 		ready = true;
 		if (async) {
