@@ -65,7 +65,8 @@ A modernized, high-performance, and hardened fork of **TempFly** for modern Pape
 | `/tf speed <value> [player]` | `/tf sp` | `tempfly.speed.self`, `tempfly.speed.other` | Adjust your personal flight speed |
 | `/tf infinite [player]` | `/tf inf` | `tempfly.infinite.toggle` | Toggle infinite flight time |
 | `/tf bypass [player]` | `/tf bp` | `tempfly.bypass.toggle` | Toggle flight requirement bypass |
-| `/tf trails` | | `tempfly.trails` | Open the cosmetic particle trails menu |
+| `/tf settrail <trail> [player]` | | `tempfly.trails.set.self`, `tempfly.trails.set.other` | Set player flight particle trail |
+| `/tf trailremove [player]` | | `tempfly.trails.remove.self`, `tempfly.trails.remove.other` | Remove player flight particle trail |
 | `/tf reload` | `/tf rl` | `tempfly.reload` | Reload all configurations, hooks, and aesthetics |
 
 ---
