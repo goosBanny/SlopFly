@@ -170,7 +170,7 @@ public abstract class SkyblockHook extends TerritoryHook {
 			}
 		}
 		Console.debug("----END Skyblock Settings----", "");
-		PageIslandSettings.initialize(this);
+
 	}
 	
 	private SkyblockRequirement loadRequirement(FileConfiguration config, String name, String path, SkyblockRequirementType type) {
@@ -589,9 +589,7 @@ public abstract class SkyblockHook extends TerritoryHook {
 	}
 	
 	
-	public void openIslandSettings(Player p) {
-		new PageIslandSettings(tempfly.getGuiManager().createSession(p));
-	}
+
 	
 	
 	/**
@@ -615,12 +613,9 @@ public abstract class SkyblockHook extends TerritoryHook {
 		return getPluginName();
 	}
 	
-	@SuppressWarnings("serial")
 	@Override
 	public Map<String, Class<? extends TempFlyCommand>> getCommands() {
-		return new HashMap<String, Class<? extends TempFlyCommand>>() {{
-			put("island", CmdIslandSettings.class);
-	}};
+		return new HashMap<>();
 	}
 	
 	

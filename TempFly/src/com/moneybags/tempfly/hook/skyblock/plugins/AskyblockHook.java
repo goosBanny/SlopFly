@@ -99,20 +99,7 @@ public class AskyblockHook extends SkyblockHook implements Listener {
 		}
 	}
 	
-	@EventHandler (priority = EventPriority.NORMAL, ignoreCancelled = false)
-	public void on(InventoryClickEvent e) {
-		if (!hasSettingsHook() || !(e.getWhoClicked() instanceof Player)) {
-			return;
-		}
-		Player p = (Player) e.getWhoClicked();
-		if (!e.getView().getTitle().equals(asky.myLocale(p.getUniqueId()).igsTitle)) {
-			return;
-		}
-		ItemStack clicked = e.getCurrentItem();
-		if (getSettingsButton().isSimilar(clicked)) {
-			openIslandSettings(p);
-		}
-	}
+
 
 	
 	@EventHandler (priority = EventPriority.MONITOR, ignoreCancelled = false)

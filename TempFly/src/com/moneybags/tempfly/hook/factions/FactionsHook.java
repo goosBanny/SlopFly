@@ -29,7 +29,7 @@ import com.moneybags.tempfly.fly.result.ResultAllow;
 import com.moneybags.tempfly.fly.result.ResultDeny;
 import com.moneybags.tempfly.fly.result.FlightResult.DenyReason;
 import com.moneybags.tempfly.hook.HookManager.Genre;
-import com.moneybags.tempfly.hook.skyblock.CmdIslandSettings;
+
 import com.moneybags.tempfly.user.FlightUser;
 import com.moneybags.tempfly.util.Console;
 import com.moneybags.tempfly.util.V;
@@ -693,12 +693,9 @@ public abstract class FactionsHook extends TerritoryHook implements Listener {
 		return "factions_preset_generic";
 	}
 
-	@SuppressWarnings("serial")
 	@Override
 	public Map<String, Class<? extends TempFlyCommand>> getCommands() {
-		return new HashMap<String, Class<? extends TempFlyCommand>>() {{
-			put("faction", CmdIslandSettings.class);
-	}};
+		return new HashMap<>();
 	}
 	
 	public FactionWrapper getFactionWrapper(Object rawFaction) {

@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import com.moneybags.tempfly.command.player.CmdTrails;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -626,7 +625,6 @@ public class CommandManager {
 					);
 					break;
 
-				case TRAILS:
 				case HELP:
 				case RELOAD:
 				case MIGRATE:
@@ -709,7 +707,6 @@ public class CommandManager {
 		PAY(CmdPay::new, "pay"),
 		SPEED(CmdSpeed::new, "speed"),
 		TIME(CmdTime::new, "time"),
-		TRAILS(CmdTrails::new, "trails"),
 		MIGRATE(CmdMigrate::new, "migrate");
 
 		private final java.util.function.BiFunction<TempFly, String[], TempFlyCommand> factory;
@@ -758,8 +755,6 @@ public class CommandManager {
 				return U.hasPermission(s, "tempfly.speed.self") || U.hasPermission(s, "tempfly.speed.other");
 			case TIME:
 				return U.hasPermission(s, "tempfly.time.self") || U.hasPermission(s, "tempfly.time.other");
-			case TRAILS:
-				return U.hasPermission(s, "tempfly.trails");
 			case MIGRATE:
 				return !U.isPlayer(s);
 			default:

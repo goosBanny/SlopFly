@@ -18,8 +18,7 @@ import com.moneybags.tempfly.aesthetic.MvdWAPI;
 import com.moneybags.tempfly.aesthetic.particle.Particles;
 import com.moneybags.tempfly.command.CommandManager;
 import com.moneybags.tempfly.fly.FlightManager;
-import com.moneybags.tempfly.gui.GuiManager;
-import com.moneybags.tempfly.gui.pages.PageTrails;
+
 import com.moneybags.tempfly.hook.HookManager;
 import com.moneybags.tempfly.hook.TempFlyHook;
 import com.moneybags.tempfly.message.MessageService;
@@ -58,7 +57,7 @@ public class TempFly extends JavaPlugin {
 	private FlightManager flight;
 	private TimeManager time;
 	private CommandManager commands;
-	private GuiManager gui;
+
 	private BukkitTask autosave;
 	private BukkitTask particleTask;
 	
@@ -94,9 +93,7 @@ public class TempFly extends JavaPlugin {
 		return commands;
 	}
 
-	public GuiManager getGuiManager() {
-		return gui;
-	}
+
 	
 	@Override
 	public void onEnable() {
@@ -122,10 +119,7 @@ public class TempFly extends JavaPlugin {
 		this.time     = new TimeManager(this);
 		this.hooks    = new HookManager(this);
 		this.commands = new CommandManager(this);
-		this.gui      = new GuiManager(this);
-		
 		hooks.loadInternalGenres();
-		initializeGui();
 		initializeAesthetics();
 
 		
@@ -177,9 +171,7 @@ public class TempFly extends JavaPlugin {
 		}
 	}
 	
-	private void initializeGui() {
-		PageTrails.initialize(this);
-	}
+
 	
 	@Override
 	public void onDisable() {
@@ -200,9 +192,7 @@ public class TempFly extends JavaPlugin {
 		if (flight != null) {
 			flight.onDisable();
 		}
-		if (gui != null) {
-			gui.endAllSessions();
-		}
+
 		if (userRepository != null) {
 			userRepository.close();
 		}
@@ -220,7 +210,6 @@ public class TempFly extends JavaPlugin {
 		if (messageService != null) {
 			messageService.clearCache();
 		}
-		gui.endAllSessions();
 		
 		if (userRepository != null) {
 			userRepository.flush();
@@ -228,7 +217,6 @@ public class TempFly extends JavaPlugin {
 		bridge.commitAll();
 		Files.createFiles(this);
 		V.loadValues();
-		initializeGui();
 		initializeAesthetics();
 		
 		flight.onTempflyReload();

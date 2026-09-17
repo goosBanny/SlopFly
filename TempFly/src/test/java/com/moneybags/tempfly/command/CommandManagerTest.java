@@ -34,7 +34,6 @@ public class CommandManagerTest {
         assertEquals("pay", CommandType.PAY.getBase());
         assertEquals("speed", CommandType.SPEED.getBase());
         assertEquals("time", CommandType.TIME.getBase());
-        assertEquals("trails", CommandType.TRAILS.getBase());
         assertEquals("migrate", CommandType.MIGRATE.getBase());
     }
 
