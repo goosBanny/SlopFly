@@ -74,10 +74,16 @@ public class ClipAPI {
 				return tempfly.getTimeManager().getPlaceHolder(p, Placeholder.TIME_SECONDS_TOTAL);
 			case "list-name":
 			case "list_name":
-				return p.isOnline() ? tempfly.getFlightManager().getUser(p).getListPlaceholder() : "";
+			{
+				com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+				return (p.isOnline() && u != null) ? u.getListPlaceholder() : "";
+			}
 			case "name-tag":
 			case "name_tag":
-				return p.isOnline() ? tempfly.getFlightManager().getUser(p).getTagPlaceholder() : "";
+			{
+				com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+				return (p.isOnline() && u != null) ? u.getTagPlaceholder() : "";
+			}
 			case "infinite":
 			case "is-infinite":
 			case "is_infinite":

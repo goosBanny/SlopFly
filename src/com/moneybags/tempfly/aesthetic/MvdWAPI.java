@@ -87,7 +87,8 @@ public class MvdWAPI {
 				public String onPlaceholderReplace(PlaceholderReplaceEvent e) {
 					Player p = e.getPlayer();
 					if (p != null && p.isOnline()) {
-						return tempfly.getFlightManager().getUser(p).getListPlaceholder();
+						com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+						return u != null ? u.getListPlaceholder() : "";
 					}
 					return null;
 				} 
@@ -97,7 +98,8 @@ public class MvdWAPI {
 				public String onPlaceholderReplace(PlaceholderReplaceEvent e) {
 					Player p = e.getPlayer();
 					if (p != null && p.isOnline()){
-						return tempfly.getFlightManager().getUser(p).getTagPlaceholder();
+						com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+						return u != null ? u.getTagPlaceholder() : "";
 					}
 					return null;
 				} 

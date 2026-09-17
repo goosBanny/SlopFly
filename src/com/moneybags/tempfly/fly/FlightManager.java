@@ -98,7 +98,7 @@ public class FlightManager implements Listener, Reloadable {
 		int interval = Math.max(1, V.movementTaskInterval);
 		int sweepEvery = Math.max(1, Math.round(20f / (float) interval));
 
-		movementTask = Bukkit.getScheduler().runTaskTimerAsynchronously(tempfly, () -> {
+		movementTask = Bukkit.getScheduler().runTaskTimer(tempfly, () -> {
 			sweepTick++;
 			boolean sweep = sweepTick >= sweepEvery;
 			if (sweep) {
@@ -347,6 +347,9 @@ public class FlightManager implements Listener, Reloadable {
 			flightTickTask = null;
 		}
 		stopMovementTask();
+		if (combat != null) {
+			combat.onDisable();
+		}
 		for (UUID u : new java.util.ArrayList<>(users.keySet())) {
 			removeUser(u, true);
 		}

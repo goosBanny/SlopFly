@@ -56,9 +56,11 @@ public class UserEnvironment {
 				: EMPTY_REGIONS));
 		cachedRegionArray = encompassing.isEmpty() ? EMPTY_REGIONS : encompassing.toArray(EMPTY_REGIONS);
 		
-		StringBuilder builder = new StringBuilder();
-		encompassing.stream().forEach(rg -> builder.append(rg.getId() + ", "));
-		Console.debug("--| Current regions: " + builder);
+		if (com.moneybags.tempfly.util.V.debug) {
+			StringBuilder builder = new StringBuilder();
+			encompassing.stream().forEach(rg -> builder.append(rg.getId()).append(", "));
+			Console.debug("--| Current regions: " + builder);
+		}
 		asessRtRegions();
 		asessRtWorld();
 		asessInfiniteFlight();

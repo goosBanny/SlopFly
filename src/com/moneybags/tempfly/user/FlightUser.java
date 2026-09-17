@@ -718,18 +718,22 @@ public class FlightUser {
 	}
 	
 	public String getListPlaceholder() {
-		return (p.isFlying() && hasFlightEnabled()) ? "<#00f878>[Fly]</#00f878>" : "";
+		return (p != null && p.isFlying() && hasFlightEnabled())
+				? (V.placeholderFlyingYes != null ? V.placeholderFlyingYes : "true")
+				: (V.placeholderFlyingNo != null ? V.placeholderFlyingNo : "false");
 	}
 	
 	public String getTagPlaceholder() {
-		return (p.isFlying() && hasFlightEnabled()) ? "<#00f878>[Fly]</#00f878>" : "";
+		return (p != null && p.isFlying() && hasFlightEnabled())
+				? (V.placeholderFlyingYes != null ? V.placeholderFlyingYes : "true")
+				: (V.placeholderFlyingNo != null ? V.placeholderFlyingNo : "false");
 	}
 	
 	private String cachedActionBarText;
 	private long cachedActionBarSecond = -1;
 
 	public void doActionBar() {
-		if (p == null || !p.isOnline() || hasInfiniteFlight()) return;
+		if (p == null || !p.isOnline() || hasInfiniteFlight() || !hasFlightEnabled()) return;
 		long roundedSec = (long) Math.ceil(state.getTime());
 		if (cachedActionBarText == null || cachedActionBarSecond != roundedSec) {
 			cachedActionBarSecond = roundedSec;

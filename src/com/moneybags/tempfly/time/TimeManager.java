@@ -351,24 +351,7 @@ public class TimeManager implements Listener {
 		secs = formatTime(TimeUnit.SECONDS, Math.ceil(seconds));
 		
 		if (s.contains("{FORMATTED_TIME}") || s.contains("{TIME_FORMATTED}")) {
-			StringBuilder sb = new StringBuilder();
-			boolean addSpace = false;
-			if (days > 0) {
-				regexA(sb, days, V.unitDays, false);
-				addSpace = true;
-			}
-			if (hours > 0) {
-				regexA(sb, hours, V.unitHours, addSpace);
-				addSpace = true;
-			}
-			if (minutes > 0) { 
-				regexA(sb, minutes, V.unitMinutes, addSpace);
-				addSpace = true;
-			}
-			if (secs > 0 || sb.length() == 0) {
-				regexA(sb, secs, V.unitSeconds, addSpace);
-			}
-			String formatted = sb.toString();
+			String formatted = formatFormattedTime(days, hours, minutes, secs);
 			s = s.replace("{FORMATTED_TIME}", formatted).replace("{TIME_FORMATTED}", formatted);
 		}
 		if (s.contains("{DAYS}")) s = s.replace("{DAYS}", String.valueOf(days));
@@ -378,6 +361,45 @@ public class TimeManager implements Listener {
 		return s;
 	}
 	
+	public String formatFormattedTime(long days, long hours, long minutes, long seconds) {
+		if (V.placeholderTimeDays != null && V.placeholderTimeHours != null
+				&& V.placeholderTimeMinutes != null && V.placeholderTimeSeconds != null) {
+			StringBuilder sb = new StringBuilder();
+			if (days > 0) {
+				sb.append(V.placeholderTimeDays.replace("{DAYS}", String.valueOf(days)));
+			}
+			if (hours > 0) {
+				sb.append(V.placeholderTimeHours.replace("{HOURS}", String.valueOf(hours)));
+			}
+			if (minutes > 0) {
+				sb.append(V.placeholderTimeMinutes.replace("{MINUTES}", String.valueOf(minutes)));
+			}
+			if (seconds > 0 || sb.length() == 0) {
+				sb.append(V.placeholderTimeSeconds.replace("{SECONDS}", String.valueOf(seconds)));
+			}
+			return sb.toString().trim();
+		}
+
+		StringBuilder sb = new StringBuilder();
+		boolean addSpace = false;
+		if (days > 0) {
+			regexA(sb, days, V.unitDays, false);
+			addSpace = true;
+		}
+		if (hours > 0) {
+			regexA(sb, hours, V.unitHours, addSpace);
+			addSpace = true;
+		}
+		if (minutes > 0) { 
+			regexA(sb, minutes, V.unitMinutes, addSpace);
+			addSpace = true;
+		}
+		if (seconds > 0 || sb.length() == 0) {
+			regexA(sb, seconds, V.unitSeconds, addSpace);
+		}
+		return sb.toString();
+	}
+
 	private void regexA(StringBuilder sb, long quantity, String unit, boolean addSpace) {
 		sb.append(addSpace ? " " : "").append(V.timeFormat
 				.replace("{QUANTITY}", String.valueOf(quantity))
@@ -419,17 +441,7 @@ public class TimeManager implements Listener {
 			hours = formatTime(TimeUnit.HOURS, supply),
 			minutes = formatTime(TimeUnit.MINUTES, supply),
 			seconds = formatTime(TimeUnit.SECONDS, supply);
-			
-			StringBuilder sb = new StringBuilder();
-			if (days > 0 && V.placeholderTimeDays != null) 
-				sb.append(V.placeholderTimeDays.replace("{DAYS}", String.valueOf(days)));
-			if (hours > 0 && V.placeholderTimeHours != null) 
-				sb.append(V.placeholderTimeHours.replace("{HOURS}", String.valueOf(hours)));
-			if (minutes > 0 && V.placeholderTimeMinutes != null) 
-				sb.append(V.placeholderTimeMinutes.replace("{MINUTES}", String.valueOf(minutes)));
-			if ((seconds > 0 || sb.length() == 0) && V.placeholderTimeSeconds != null) 
-				sb.append(V.placeholderTimeSeconds.replace("{SECONDS}", String.valueOf(seconds)));
-			return sb.toString();
+			return formatFormattedTime(days, hours, minutes, seconds);
 		}
 		case TIME_DAYS:
 			if (infinite) return infSym;

@@ -155,6 +155,11 @@ public class CombatHandler implements RequirementProvider, Listener {
 			cancelTag(p.getUniqueId());
 		}
 	}
+
+	@EventHandler (priority = EventPriority.MONITOR)
+	public void onQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+		tags.remove(e.getPlayer().getUniqueId());
+	}
 	
 	@EventHandler (priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void on(EntityDamageByEntityEvent e) {

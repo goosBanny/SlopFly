@@ -63,6 +63,18 @@ public class TimeManagerTest {
     }
 
     @Test
+    public void testFormatFormattedTimeGranular() {
+        V.placeholderTimeDays = "{DAYS}d ";
+        V.placeholderTimeHours = "{HOURS}h ";
+        V.placeholderTimeMinutes = "{MINUTES}m ";
+        V.placeholderTimeSeconds = "{SECONDS}s";
+
+        assertEquals("1d 2h 3m 4s", timeManager.formatFormattedTime(1, 2, 3, 4));
+        assertEquals("5m 30s", timeManager.formatFormattedTime(0, 0, 5, 30));
+        assertEquals("0s", timeManager.formatFormattedTime(0, 0, 0, 0));
+    }
+
+    @Test
     public void testRegexStringTokens() {
         String template = "{DAYS}d:{HOURS}h:{MINUTES}m:{SECONDS}s";
         double seconds = 3665; // 0d 1h 1m 5s

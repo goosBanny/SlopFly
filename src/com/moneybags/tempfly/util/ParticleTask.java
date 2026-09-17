@@ -15,8 +15,9 @@ public class ParticleTask extends BukkitRunnable {
 	
 	@Override
 	public void run() {
-		for (FlightUser user: tempfly.getFlightManager().getUserValues()) {
-			if (user.hasFlightEnabled() && user.getPlayer().isFlying()) {
+		for (FlightUser user : tempfly.getFlightManager().getUserValues()) {
+			org.bukkit.entity.Player p = user.getPlayer();
+			if (p != null && p.isOnline() && user.hasFlightEnabled() && p.isFlying()) {
 				user.playTrail();
 			}
 		}
