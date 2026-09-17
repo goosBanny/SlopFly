@@ -108,7 +108,32 @@ public class MvdWAPI {
 					Player p = e.getPlayer();
 					if (p != null && p.isOnline()){
 						com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
-						return u != null && u.hasInfiniteFlight() ? (com.moneybags.tempfly.util.V.infinity != null ? com.moneybags.tempfly.util.V.infinity : "∞") : "";
+						String yes = com.moneybags.tempfly.util.V.placeholderInfiniteYes != null ? com.moneybags.tempfly.util.V.placeholderInfiniteYes : (com.moneybags.tempfly.util.V.infinity != null ? com.moneybags.tempfly.util.V.infinity : "∞");
+						String no = com.moneybags.tempfly.util.V.placeholderInfiniteNo != null ? com.moneybags.tempfly.util.V.placeholderInfiniteNo : "";
+						return u != null && u.hasInfiniteFlight() ? yes : no;
+					}
+					return null;
+				} 
+			  });
+			  PlaceholderAPI.registerPlaceholder(tempfly, "tempfly_is_flying", new PlaceholderReplacer() {
+				@Override
+				public String onPlaceholderReplace(PlaceholderReplaceEvent e) {
+					Player p = e.getPlayer();
+					if (p != null && p.isOnline()){
+						com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+						String yes = com.moneybags.tempfly.util.V.placeholderFlyingYes != null ? com.moneybags.tempfly.util.V.placeholderFlyingYes : "true";
+						String no = com.moneybags.tempfly.util.V.placeholderFlyingNo != null ? com.moneybags.tempfly.util.V.placeholderFlyingNo : "false";
+						return u != null && u.hasFlightEnabled() ? yes : no;
+					}
+					return null;
+				} 
+			  });
+			  PlaceholderAPI.registerPlaceholder(tempfly, "tempfly_speed", new PlaceholderReplacer() {
+				@Override
+				public String onPlaceholderReplace(PlaceholderReplaceEvent e) {
+					Player p = e.getPlayer();
+					if (p != null && p.isOnline()){
+						return new java.text.DecimalFormat("#.##").format(p.getFlySpeed() * 10);
 					}
 					return null;
 				} 

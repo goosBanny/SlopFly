@@ -76,6 +76,12 @@ public class ConfigTest {
 
 		YamlConfiguration langYaml = new YamlConfiguration();
 		langYaml.set("aesthetic.symbols.infinity", "INF");
+		langYaml.set("aesthetic.placeholders.infinite_yes", "UNLIMITED");
+		langYaml.set("aesthetic.placeholders.infinite_no", "TIMED");
+		langYaml.set("aesthetic.placeholders.flying_yes", "YES");
+		langYaml.set("aesthetic.placeholders.flying_no", "NO");
+		langYaml.set("aesthetic.placeholders.unknown_user", "N/A");
+		langYaml.set("aesthetic.placeholders.invalid", "ERR");
 
 		AestheticConfig config = AestheticConfig.from(configYaml, langYaml);
 
@@ -86,5 +92,11 @@ public class ConfigTest {
 		assertEquals("FLAME", config.particleType());
 		assertTrue(config.listDynamic());
 		assertEquals("&a[FLY] {PLAYER}", config.listName());
+		assertEquals("UNLIMITED", config.placeholderInfiniteYes());
+		assertEquals("TIMED", config.placeholderInfiniteNo());
+		assertEquals("YES", config.placeholderFlyingYes());
+		assertEquals("NO", config.placeholderFlyingNo());
+		assertEquals("N/A", config.placeholderUnknownUser());
+		assertEquals("ERR", config.placeholderInvalid());
 	}
 }

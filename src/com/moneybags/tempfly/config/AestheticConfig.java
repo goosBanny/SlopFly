@@ -18,7 +18,13 @@ public record AestheticConfig(
 		boolean listDynamic,
 		String listName,
 		boolean tagDynamic,
-		String tagName
+		String tagName,
+		String placeholderInfiniteYes,
+		String placeholderInfiniteNo,
+		String placeholderFlyingYes,
+		String placeholderFlyingNo,
+		String placeholderUnknownUser,
+		String placeholderInvalid
 ) {
 	public static AestheticConfig from(FileConfiguration config, FileConfiguration lang) {
 		boolean actionBar = config.getBoolean("aesthetic.action_bar.enabled", true);
@@ -51,11 +57,21 @@ public record AestheticConfig(
 				: config.getBoolean("aesthetic.identifier.name_tag.dynamic", false);
 		String tagName = config.getString("aesthetic.identifier.name_tag.name", "{PLAYER}");
 
+		String placeholderInfiniteYes = lang != null ? lang.getString("aesthetic.placeholders.infinite_yes", infinitySymbol) : infinitySymbol;
+		String placeholderInfiniteNo = lang != null ? lang.getString("aesthetic.placeholders.infinite_no", "") : "";
+		String placeholderFlyingYes = lang != null ? lang.getString("aesthetic.placeholders.flying_yes", "true") : "true";
+		String placeholderFlyingNo = lang != null ? lang.getString("aesthetic.placeholders.flying_no", "false") : "false";
+		String placeholderUnknownUser = lang != null ? lang.getString("aesthetic.placeholders.unknown_user", "0s") : "0s";
+		String placeholderInvalid = lang != null ? lang.getString("aesthetic.placeholders.invalid", "") : "";
+
 		return new AestheticConfig(
 				actionBar, actionText, warningTitle, warningSubtitle,
 				Collections.unmodifiableList(warningTimes),
 				particles, particleType, particleDefault, infinitySymbol,
-				listDynamic, listName, tagDynamic, tagName
+				listDynamic, listName, tagDynamic, tagName,
+				placeholderInfiniteYes, placeholderInfiniteNo,
+				placeholderFlyingYes, placeholderFlyingNo,
+				placeholderUnknownUser, placeholderInvalid
 		);
 	}
 }

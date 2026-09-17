@@ -326,7 +326,7 @@ public class TimeManager implements Listener {
 
 	public String regexString(String s, double seconds, boolean infinite) {
 		if (s == null || s.isEmpty()) return "";
-		String infSym = V.infinity != null ? V.infinity : "∞";
+		String infSym = V.placeholderInfiniteYes != null ? V.placeholderInfiniteYes : (V.infinity != null ? V.infinity : "∞");
 		if (s.contains("{INFINITY}")) {
 			s = s.replace("{INFINITY}", infSym);
 		}
@@ -403,10 +403,10 @@ public class TimeManager implements Listener {
 		double supply = getTime(p.getUniqueId());
 		FlightUser user = tempfly.getFlightManager().getUser(p);
 		if (user == null) {
-			return "broken message";
+			return V.placeholderUnknownUser != null ? V.placeholderUnknownUser : "0s";
 		}
 		boolean infinite = user.hasInfiniteFlight();
-		String infSym = V.infinity != null ? V.infinity : "∞";
+		String infSym = V.placeholderInfiniteYes != null ? V.placeholderInfiniteYes : (V.infinity != null ? V.infinity : "∞");
 
 		switch (type) {
 		case TIME_FORMATTED:
@@ -453,7 +453,7 @@ public class TimeManager implements Listener {
 		default:
 			break;
 		}
-		return "broken message";
+		return V.placeholderInvalid != null ? V.placeholderInvalid : "";
 	}
 	
 	

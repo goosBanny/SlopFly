@@ -32,8 +32,6 @@ public class V {
 			invalidCommand,
 			invalidReciever,
 			invalidFlyerSelf,
-			invalidFunds,
-			invalidEconomy,
 
 			timeGivenOther,
 			timeGivenSelf,
@@ -48,7 +46,6 @@ public class V {
 			timeMaxSelf,
 			timeDecayLost,
 			timeFormat,
-			timePurchased,
 			firstJoin,
 			dailyLogin,
 
@@ -118,7 +115,13 @@ public class V {
 			trailSetSelf,
 			trailSetOther,
 
-			vaultPermsRequired;
+			vaultPermsRequired,
+			placeholderInfiniteYes,
+			placeholderInfiniteNo,
+			placeholderFlyingYes,
+			placeholderFlyingNo,
+			placeholderUnknownUser,
+			placeholderInvalid;
 
 	public static boolean permaTimer,
 			groundTimer,
@@ -156,7 +159,6 @@ public class V {
 			timeDecay,
 			flightToggle,
 			hideVanish,
-			shop,
 
 			debug,
 			disableTracker,
@@ -245,8 +247,6 @@ public class V {
 		invalidTimeSelf = st(C.LANG, "general.invalid.time_self");
 		invalidReciever = st(C.LANG, "general.invalid.reciever");
 		invalidFlyerSelf = st(C.LANG, "general.invalid.flyer_self");
-		invalidFunds = st(C.LANG, "general.invalid.funds");
-		invalidEconomy = st(C.LANG, "general.invalid.economy");
 		vaultPermsRequired = st(C.LANG, "general.invalid.vault_perms");
 
 		timeGivenOther = st(C.LANG, "general.time.given_other");
@@ -262,9 +262,15 @@ public class V {
 		timeMaxSelf = st(C.LANG, "general.time.max_self");
 		timeDecayLost = st(C.LANG, "general.time.decay");
 		timeFormat = st(C.LANG, "general.time.format");
-		timePurchased = st(C.LANG, "general.time.purchased");
 		firstJoin = st(C.LANG, "general.time.first_join");
 		dailyLogin = st(C.LANG, "general.time.daily_login");
+
+		placeholderInfiniteYes = aestheticConfig.placeholderInfiniteYes();
+		placeholderInfiniteNo = aestheticConfig.placeholderInfiniteNo();
+		placeholderFlyingYes = aestheticConfig.placeholderFlyingYes();
+		placeholderFlyingNo = aestheticConfig.placeholderFlyingNo();
+		placeholderUnknownUser = aestheticConfig.placeholderUnknownUser();
+		placeholderInvalid = aestheticConfig.placeholderInvalid();
 
 		unitSeconds = st(C.LANG, "general.unit.seconds", "s");
 		unitMinutes = st(C.LANG, "general.unit.minutes", "m");
@@ -419,7 +425,6 @@ public class V {
 		decayAmount = config.getDouble("general.time_decay.seconds_lost", 15);
 		firstJoinTime = config.getLong("general.bonus.first_join", 0);
 		legacyBonus = config.getLong("general.bonus.daily_login", 0);
-		shop = config.getBoolean("shop.general.enabled", false);
 
 		bugInfiniteA = config.getBoolean("workarounds.infinite_flight.fix_a");
 		bugInfiniteB = config.getBoolean("workarounds.infinite_flight.fix_b");

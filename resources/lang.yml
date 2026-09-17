@@ -1,21 +1,23 @@
 system:
-  prefix:  "&8[&dTemp&fFly&8]"
-  reload: "{PREFIX} &aYou reloaded the plugin."
+  prefix: "<#4FD2FC><bold>FLIGHT</bold></gradient> <dark_gray>▶</dark_gray>"
+  reload: "{PREFIX} <#00f878>Configuration, aesthetic settings, and data repositories reloaded successfully.</#00f878>"
   help:
-    - "&8&l------&dTemp&fFly&8&l------"
-    - "&6/tf"
-    - "&7- Toggle tempfly"
-    - "&6/tf time"
-    - "&7- View remaining fly time"
-    - "&6/tf pay [player] [time]"
-    - "&7- send another player fly time"
+    - " <#4FD2FC><bold>TEMPLY FLIGHT HELP</bold></gradient>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf</white> <dark_gray>|</dark_gray> <gray>Toggle your temporary flight mode</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf time [player]</white> <dark_gray>|</dark_gray> <gray>Check flight balance and remaining time</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf pay <player> <time></white> <dark_gray>|</dark_gray> <gray>Transfer flight time to another player</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf speed <amount> [player]</white> <dark_gray>|</dark_gray> <gray>Adjust flight speed</gray>"
   help_extended:
-    - "&6/tf give [player] [time]"
-    - "&7- Give a player fly time"
-    - "&6/tf remove [player] [time]"
-    - "&7- Remove fly time from a player"
-    - "&6/tf set [player] [time]"
-    - "&7- Set a players fly time"
+    - " <#4FD2FC><bold>ADMINISTRATION COMMANDS</bold></gradient>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf give <player> <time></white> <dark_gray>|</dark_gray> <gray>Grant flight time to a player</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf giveall <time></white> <dark_gray>|</dark_gray> <gray>Grant flight time to all online players</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf remove <player> <time></white> <dark_gray>|</dark_gray> <gray>Deduct flight time from a player</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf set <player> <time></white> <dark_gray>|</dark_gray> <gray>Set exact flight balance for a player</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf infinite [player]</white> <dark_gray>|</dark_gray> <gray>Toggle unlimited flight mode</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf bypass [player]</white> <dark_gray>|</dark_gray> <gray>Toggle requirement bypass mode</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf settrail <trail> [player]</white> <dark_gray>|</dark_gray> <gray>Set cosmetic particle flight trail</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf trailremove [player]</white> <dark_gray>|</dark_gray> <gray>Clear cosmetic particle flight trail</gray>"
+    - " <#4FD2FC>●</#4FD2FC> <white>/tf reload</white> <dark_gray>|</dark_gray> <gray>Reload configuration and hooks</gray>"
 
 general:
 
@@ -26,137 +28,138 @@ general:
     days: "d"
 
   invalid:
-    time_other: "{PREFIX} &f{PLAYER} &chas no more flight time!"
-    time_self: "{PREFIX} &cYou have no more flight time!"
-    number: "{PREFIX} &f{NUMBER} &cis not a valid number!"
-    particle: "{PREFIX} &f{PARTICLE} &cis not a valid particle type!"
-    player: "{PREFIX} &cThe player &f{PLAYER} &cwas not found..."
-    permission: "{PREFIX} &cYou have insufficient permissions..."
-    command: "&fUnknown command. Type /help for more information."
-    reciever: "{PREFIX} &cYou cannot pay yourself!"
-    sender: "{PREFIX} &cOnly players can use this command!"
-    flyer_self: "{PREFIX} &cYou are not flying!"
-    funds: "{PREFIX} &cThis costs &f{COST}&c! You do not have enough money!"
-    economy: "{PREFIX} &cYou must have a (&fvault&c) economy installed to use the shop!"
-    vault_perms: "{PREFIX} &cYou must install the plugin (&fvault&c) for the ability to set offline player time!"
-    
+    time_other: "{PREFIX} <red><white>{PLAYER}</white> does not have any flight time remaining!</red>"
+    time_self: "{PREFIX} <red>You do not have any flight time remaining!</red>"
+    number: "{PREFIX} <red><white>{NUMBER}</white> is not a valid number!</red>"
+    particle: "{PREFIX} <red><white>{PARTICLE}</white> is not a valid particle effect!</red>"
+    player: "{PREFIX} <red>The player <white>{PLAYER}</white> could not be found.</red>"
+    permission: "{PREFIX} <red>You do not have permission to execute this command.</red>"
+    command: "<red>Unknown command. Type <white>/tf help</white> for available commands.</red>"
+    reciever: "{PREFIX} <red>You cannot send flight time to yourself!</red>"
+    sender: "{PREFIX} <red>This command can only be executed by in-game players.</red>"
+    flyer_self: "{PREFIX} <red>You are not currently flying!</red>"
+    vault_perms: "{PREFIX} <red>Vault is required to manage offline player flight balances.</red>"
+
   time:
     format: "{QUANTITY}{UNIT}"
-    given_other: "{PREFIX} &f{PLAYER} &agot {FORMATTED_TIME}&a."
-    given_all: "{PREFIX} &aYou gave &fALL &aplayers {FORMATTED_TIME}&a."
-    given_self: "{PREFIX} &aYou recieved {FORMATTED_TIME}&a."
-    removed_other: "{PREFIX} &f{PLAYER} &clost {FORMATTED_TIME}&c."
-    removed_self: "{PREFIX} &cYou lost {FORMATTED_TIME}&c."
-    sent_other: "{PREFIX} &aYou sent &f{PLAYER}&a {FORMATTED_TIME}&a."
-    sent_self: "{PREFIX} &f{PLAYER} &asent you {FORMATTED_TIME}&a."
-    set_other: "{PREFIX} &f{PLAYER} &ahad their time set to {FORMATTED_TIME}&a."
-    set_self: "{PREFIX} &aYour time was set to {FORMATTED_TIME}&a."
-    max_other: "{PREFIX} &f{PLAYER} &chas reached the maximum allowed time&c!"
-    max_self: "{PREFIX} &cYou have reached the maximum allowed time&c!"
-    decay: "{PREFIX} &cYou lost {FORMATTED_TIME} &cfor inactivity!"
-    first_join: "{PREFIX} &aYou recieved {FORMATTED_TIME} &aof flight time. Fly with &f/tf&a."
-    daily_login: "{PREFIX} &aYou recieved a daily bonus of {FORMATTED_TIME}&a!"
-    purchased: "{PREFIX} &aYou purchased {FORMATTED_TIME} &afor &e${COST}&a!"
-  
+    given_other: "{PREFIX} <gray>Player <white>{PLAYER}</white> received <#00f878>{FORMATTED_TIME}</#00f878> of flight time.</gray>"
+    given_all: "{PREFIX} <gray>Granted <#00f878>{FORMATTED_TIME}</#00f878> of flight time to <bold>ALL</bold> online players.</gray>"
+    given_self: "{PREFIX} <gray>You received <#00f878>{FORMATTED_TIME}</#00f878> of flight time.</gray>"
+    removed_other: "{PREFIX} <gray>Deducted <red>{FORMATTED_TIME}</red> of flight time from <white>{PLAYER}</white>.</gray>"
+    removed_self: "{PREFIX} <gray>You lost <red>{FORMATTED_TIME}</red> of flight time.</gray>"
+    sent_other: "{PREFIX} <gray>Sent <#00f878>{FORMATTED_TIME}</#00f878> of flight time to <white>{PLAYER}</white>.</gray>"
+    sent_self: "{PREFIX} <gray><white>{PLAYER}</white> sent you <#00f878>{FORMATTED_TIME}</#00f878> of flight time.</gray>"
+    set_other: "{PREFIX} <gray>Set <white>{PLAYER}</white>'s flight balance to <#00f878>{FORMATTED_TIME}</#00f878>.</gray>"
+    set_self: "{PREFIX} <gray>Your flight balance was set to <#00f878>{FORMATTED_TIME}</#00f878>.</gray>"
+    max_other: "{PREFIX} <red><white>{PLAYER}</white> has reached the maximum allowed flight balance!</red>"
+    max_self: "{PREFIX} <red>You have reached your maximum allowed flight balance!</red>"
+    decay: "{PREFIX} <red>Deducted <white>{FORMATTED_TIME}</white> of flight time due to offline inactivity.</red>"
+    first_join: "{PREFIX} <gray>Welcome! You received <#00f878>{FORMATTED_TIME}</#00f878> of flight time. Toggle flight using <white>/tf</white>.</gray>"
+    daily_login: "{PREFIX} <gray>You received your daily flight bonus of <#00f878>{FORMATTED_TIME}</#00f878>!</gray>"
+
   info:
-    header: "&8&m--------&dTime&8&m--------"
-    player: "&fPlayer&7: &e{PLAYER}"
-    infinite: "&fInfinite: &b{INFINITY} &eUser has unlimited flight!"
-    days: "&fDays&7: &e{DAYS}"
-    hours: "&fHours&7: &e{HOURS}"
-    minutes: "&fMinutes&7: &e{MINUTES}"
-    seconds: "&fSeconds&7: &e{SECONDS}"
-    footer: "&8&m-------------------"
-    
+    header: "<#4FD2FC><strikethrough>========================================</strikethrough></gradient>"
+    player: " <#4FD2FC>●</#4FD2FC> <gray>Player:</gray> <yellow>{PLAYER}</yellow>"
+    infinite: " <#4FD2FC>●</#4FD2FC> <gray>Status:</gray> <#00f878>Infinite Flight Enabled</#00f878>"
+    days: " <#4FD2FC>●</#4FD2FC> <gray>Days:</gray> <yellow>{DAYS}</yellow>"
+    hours: " <#4FD2FC>●</#4FD2FC> <gray>Hours:</gray> <yellow>{HOURS}</yellow>"
+    minutes: " <#4FD2FC>●</#4FD2FC> <gray>Minutes:</gray> <yellow>{MINUTES}</yellow>"
+    seconds: " <#4FD2FC>●</#4FD2FC> <gray>Seconds:</gray> <yellow>{SECONDS}</yellow>"
+    footer: "<#4FD2FC><strikethrough>========================================</strikethrough></gradient>"
+
   fly:
-    enabled_other: "{PREFIX} &f{PLAYER} &ais now flying"
-    enabled_self: "{PREFIX} &aYour flight was enabled!"
-    disabled_other: "{PREFIX} &f{PLAYER} &cis no longer flying!"
-    disabled_self: "{PREFIX} &cYour flight was disabled!"
-    speed_other: "{PREFIX} &f{PLAYER} &ahad their speed set to {SPEED}&a."
-    speed_self: "{PREFIX} &aYour fly speed was set to &f{SPEED}&a."
-    speed_limit_other: "{PREFIX} &f{PLAYER} &cIs currently limited to fly speed &f{SPEED}&c."
-    speed_limit_self: "{PREFIX} &cYour fly speed is currently limited to &f{SPEED}&c."
-    speed_restricted: "{PREFIX} &cYou are not allowed to change your fly speed!"
-    already_enabled: "{PREFIX} &aYour flight is already enabled!"
-    already_disabled: "{PREFIX} &cYour flight is already disabled!"
-    idle_drop: "{PREFIX} &cYou lost flight due to being idle!"
-    idle: "{PREFIX} &cYou are now considered idle."
-    infinite_enabled: "{PREFIX} &aYou enabled your infinite flight!"
-    infinite_disabled: "{PREFIX} &cYou disabled your infinite flight!"
-    bypass_enabled: "{PREFIX} &aYou enabled flight bypass mode!"
-    bypass_disabled: "{PREFIX} &cYou disabled flight bypass mode!"
+    enabled_other: "{PREFIX} <gray>Flight enabled for <white>{PLAYER}</white>.</gray>"
+    enabled_self: "{PREFIX} <#00f878>Flight mode enabled!</#00f878>"
+    disabled_other: "{PREFIX} <gray>Flight disabled for <white>{PLAYER}</white>.</gray>"
+    disabled_self: "{PREFIX} <red>Flight mode disabled!</red>"
+    speed_other: "{PREFIX} <gray>Flight speed for <white>{PLAYER}</white> set to <#00f878>{SPEED}</#00f878>.</gray>"
+    speed_self: "{PREFIX} <gray>Your flight speed was set to <#00f878>{SPEED}</#00f878>.</gray>"
+    speed_limit_other: "{PREFIX} <red><white>{PLAYER}</white>'s flight speed is currently capped at <white>{SPEED}</white>.</red>"
+    speed_limit_self: "{PREFIX} <red>Your flight speed is currently capped at <white>{SPEED}</white> in this area.</red>"
+    speed_restricted: "{PREFIX} <red>You do not have permission to alter flight speed.</red>"
+    already_enabled: "{PREFIX} <yellow>Your flight is already active!</yellow>"
+    already_disabled: "{PREFIX} <yellow>Your flight is already inactive!</yellow>"
+    idle_drop: "{PREFIX} <red>Flight disabled due to inactivity.</red>"
+    idle: "{PREFIX} <yellow>You are now marked as idle.</yellow>"
+    infinite_enabled: "{PREFIX} <#00f878>Infinite flight mode activated!</#00f878>"
+    infinite_disabled: "{PREFIX} <red>Infinite flight mode deactivated.</red>"
+    bypass_enabled: "{PREFIX} <#00f878>Flight requirement bypass mode activated!</#00f878>"
+    bypass_disabled: "{PREFIX} <red>Flight requirement bypass mode deactivated.</red>"
 
   requirement:
     fail:
-      default_other: "{PREFIX} &f{PLAYER} &ccannot currently fly!"
-      default: "{PREFIX} &cThe requirements have not been met to fly in this area."
-      region: "{PREFIX} &cFlight is disabled in this region!"
-      world: "{PREFIX} &cFlight is disabled in this world!"
-      combat: "{PREFIX} &cYou are currently combat tagged!"
-      height: "{PREFIX} &f{MAX_Y} &cis the maximum altitude for flight!"
-      structure: "{PPREFIX} &cFlight is disabled near this structure!"
-    pass: 
-      default: "{PREFIX} &aYou may now fly!"
-      combat: "{PREFIX} &aYou are no longer combat tagged, fly away!"
-    
+      default_other: "{PREFIX} <red><white>{PLAYER}</white> cannot currently fly in this location.</red>"
+      default: "{PREFIX} <red>You do not meet the flight requirements for this area.</red>"
+      region: "{PREFIX} <red>Flight is disabled in this region!</red>"
+      world: "{PREFIX} <red>Flight is disabled in this world!</red>"
+      combat: "{PREFIX} <red>You cannot fly while combat tagged!</red>"
+      height: "{PREFIX} <red>Altitude limit reached! Maximum flight altitude is <white>{MAX_Y}</white>.</red>"
+      structure: "{PREFIX} <red>Flight is restricted near this structure!</red>"
+    pass:
+      default: "{PREFIX} <#00f878>Flight requirements satisfied. You may now fly!</#00f878>"
+      combat: "{PREFIX} <#00f878>Combat tag expired. Flight restored!</#00f878>"
+
 aesthetic:
   symbols:
     infinity: "∞"
+  placeholders:
+    infinite_yes: "∞"
+    infinite_no: ""
+    flying_yes: "true"
+    flying_no: "false"
+    unknown_user: "0s"
+    invalid: ""
   featherboard:
-    days: "&e{DAYS}&fd "
-    hours: "&e{HOURS}&fh "
-    minutes: "&e{MINUTES}&fm "
-    seconds: "&e{SECONDS}&fs "
+    days: "<yellow>{DAYS}</yellow><white>d</white> "
+    hours: "<yellow>{HOURS}</yellow><white>h</white> "
+    minutes: "<yellow>{MINUTES}</yellow><white>m</white> "
+    seconds: "<yellow>{SECONDS}</yellow><white>s</white> "
   trail:
-    removed_self: "{PREFIX} &aYour trail was removed!"
-    removed_other: "{PREFIX} &e{PLAYER} &ahad their trail removed!"
-    set_self: "{PREFIX} &aYour trail was set to &f{PARTICLE}&a!"
-    set_other: "{PREFIX} &f{PLAYER} &ahad their trail set to &f{PARTICLE}&a!"
+    removed_self: "{PREFIX} <gray>Your particle trail was removed.</gray>"
+    removed_other: "{PREFIX} <gray>Particle trail removed for <white>{PLAYER}</white>.</gray>"
+    set_self: "{PREFIX} <gray>Your particle trail was set to <#00f878>{PARTICLE}</#00f878>!</gray>"
+    set_other: "{PREFIX} <gray>Particle trail for <white>{PLAYER}</white> set to <#00f878>{PARTICLE}</#00f878>.</gray>"
 
 command:
-  # Here you can configure the command arguments. This will help players on foriegn servers that dont understand english.
-  # Everything here must be unique so be careful, you could break the commands if you put duplicate entries.
-  # Note: It is  not reccomended to put hundreds of translations in here. just the main ones your server would need.
   unit:
     seconds:
-      # The unit that will be shown on tab completion of the command
       tab_complete: "second"
-      # Identifiers that represent this time unit.
       recognized:
         - "s"
         - "sec"
         - "second"
-        - "zweite" #German
+        - "seconds"
     minutes:
       tab_complete: "minute"
       recognized:
         - "m"
         - "min"
-        - "minute" # english and german
+        - "minute"
+        - "minutes"
     hours:
       tab_complete: "hour"
       recognized:
         - "h"
         - "hour"
-        - "stunde" #German
+        - "hours"
     days:
       tab_complete: "day"
       recognized:
         - "d"
         - "day"
-        - "tag" #German
+        - "days"
 
-  # Here you can specify all the tempfly sub commands.
   base:
     give:
       - "give"
       - "add"
-    givall:
+    give_all:
+      - "giveall"
       - "givall"
       - "addall"
     reload:
       - "reload"
+      - "rl"
     remove:
       - "remove"
       - "take"
@@ -164,30 +167,35 @@ command:
       - "set"
     trail_remove:
       - "remove_trail"
+      - "trailremove"
+    trail_set:
+      - "set_trail"
+      - "settrail"
+      - "trail"
     bypass:
       - "bypass"
+      - "bp"
+    fly:
+      - "toggle"
+      - "fly"
     help:
       - "help"
       - "commands"
     infinite:
       - "infinite"
+      - "inf"
     pay:
       - "pay"
       - "send"
-    shop:
-      - "shop"
-      - "buy"
     speed:
       - "speed"
+      - "sp"
     time:
       - "time"
       - "bal"
       - "balance"
-    trails:
-      - "trails"
-      - "particles"
-    trail_set:
-      - "trail"
+    migrate:
+      - "migrate"
 
   enable:
     - "on"
@@ -198,6 +206,5 @@ command:
 
   syntax_error:
     cmd_fly:
-      toggle_other: "&c/tf [player] [on / off]"
-      toggle_self: "&c/tf [on / off]"
-    
+      toggle_other: "<red>Usage: /tf [player] [on|off]</red>"
+      toggle_self: "<red>Usage: /tf [on|off]</red>"
