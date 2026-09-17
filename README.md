@@ -86,4 +86,4 @@ This project requires **Java 21+** and **Maven 3.8+** to build:
 mvn clean package
 ```
 
-The compiled JAR file will be located in `TempFly/target/TempFly-3.1.7.jar`.
+The compiled JAR file will be located in `target/TempFly-3.1.7.jar`.
