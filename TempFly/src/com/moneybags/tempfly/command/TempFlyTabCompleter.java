@@ -33,6 +33,9 @@ public class TempFlyTabCompleter implements TabCompleter, Listener {
 		if (V.disableTab && !U.hasPermission(s, "tempfly.disable_tab.bypass")) {
 			return new ArrayList<>();
 		}
+		if (manager.getRouter() != null) {
+			return manager.getRouter().tabComplete(s, args);
+		}
 		if (args.length == 0 || args.length == 1) {
 			List<String> matches = new ArrayList<>();
 			String partial = args.length == 1 ? args[0] : "";

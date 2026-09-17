@@ -25,6 +25,9 @@ public class TempFlyExecutor implements CommandExecutor, Listener {
 	
 	@Override
 	public boolean onCommand(CommandSender s, Command cmd, String label, String[] args) {
+		if (manager.getRouter() != null) {
+			return manager.getRouter().execute(s, args);
+		}
 		TempFlyCommand command = manager.getCommand(args);
 		if (command != null) {
 			command.executeAs(s);

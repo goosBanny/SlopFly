@@ -2,12 +2,15 @@ package com.moneybags.tempfly.command;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+
+import com.moneybags.tempfly.command.player.CmdTrails;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -40,7 +43,12 @@ import com.moneybags.tempfly.command.player.CmdPay;
 import com.moneybags.tempfly.command.player.CmdShop;
 import com.moneybags.tempfly.command.player.CmdSpeed;
 import com.moneybags.tempfly.command.player.CmdTime;
-import com.moneybags.tempfly.command.player.CmdTrails;
+import com.moneybags.tempfly.command.sub.BypassSubCommand;
+import com.moneybags.tempfly.command.sub.FlySubCommand;
+import com.moneybags.tempfly.command.sub.InfiniteSubCommand;
+import com.moneybags.tempfly.command.sub.ReloadSubCommand;
+import com.moneybags.tempfly.command.sub.SpeedSubCommand;
+import com.moneybags.tempfly.command.sub.TimeSubCommand;
 import com.moneybags.tempfly.user.FlightUser;
 import com.moneybags.tempfly.util.U;
 import com.moneybags.tempfly.util.V;
@@ -50,6 +58,7 @@ public class CommandManager {
 
 	private final TempFly tempfly;
 	private final TempFlyExecutor executor;
+	private final RootCommandRouter router;
 
 	private final List<String> enable = new ArrayList<>();
 	private final List<String> disable = new ArrayList<>();
@@ -90,6 +99,7 @@ public class CommandManager {
 
 	public CommandManager(TempFly tempfly) {
 		this.tempfly = tempfly;
+		this.router = new RootCommandRouter(tempfly);
 		this.executor = new TempFlyExecutor(this);
 
 		for (CommandType type : CommandType.values()) {
@@ -142,9 +152,36 @@ public class CommandManager {
 		disable.addAll((temp = Files.lang.getStringList("command.disable")) == null || temp.size() == 0 ?
 				Arrays.asList("off", "disable") : temp);
 
+		initSubCommands();
+
 		tempfly.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
 			registerCommands(event.registrar());
 		});
+	}
+
+	private void initSubCommands() {
+		router.register(new FlySubCommand(tempfly));
+		router.register(new TimeSubCommand(tempfly));
+		router.register(new SpeedSubCommand(tempfly));
+		router.register(new InfiniteSubCommand(tempfly));
+		router.register(new BypassSubCommand(tempfly));
+		router.register(new ReloadSubCommand(tempfly));
+
+		// Wrap any remaining CommandTypes in LegacyCommandAdapter
+		for (CommandType type : CommandType.values()) {
+			if (!type.isEnabled(tempfly)) continue;
+			List<String> bases = getCommandBases(type);
+			if (bases == null || bases.isEmpty()) continue;
+			String primary = bases.get(0);
+			if (router.getCommand(primary) != null) {
+				continue;
+			}
+			router.register(new LegacyCommandAdapter(tempfly, primary, bases, type::createCommand));
+		}
+	}
+
+	public RootCommandRouter getRouter() {
+		return router;
 	}
 
 	public TempFly getTempFly() {
@@ -237,6 +274,10 @@ public class CommandManager {
 	}
 
 	public void executeCommand(CommandSender sender, String[] args) {
+		if (router != null) {
+			router.execute(sender, args);
+			return;
+		}
 		TempFlyCommand command = getCommand(args);
 		if (command != null) {
 			command.executeAs(sender);
@@ -262,7 +303,7 @@ public class CommandManager {
 	}
 
 	public void registerHookCommand(String base, Class<? extends TempFlyCommand> command) throws IllegalArgumentException {
-		if (hookRegistry.containsKey(base)) {
+		if (hookRegistry.containsKey(base) || (router != null && router.getCommand(base) != null)) {
 			throw new IllegalArgumentException("Sub command bases must be unique! This command is already taken: " + base);
 		}
 
@@ -272,10 +313,16 @@ public class CommandManager {
 			throw new IllegalArgumentException("This sub command is not properly structured: " + base);
 		}
 		hookRegistry.put(base, command);
+		if (router != null) {
+			router.register(new LegacyCommandAdapter(tempfly, base, Collections.singletonList(base), command));
+		}
 	}
 
 	public void unregisterHookCommand(String base) {
 		hookRegistry.remove(base);
+		if (router != null) {
+			router.unregister(base);
+		}
 	}
 
 	public List<String> getAllCommandBases() {
