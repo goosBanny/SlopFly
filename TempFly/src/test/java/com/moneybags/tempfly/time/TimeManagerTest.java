@@ -77,6 +77,24 @@ public class TimeManagerTest {
     }
 
     @Test
+    public void testRegexStringInfiniteFlight() {
+        V.infinity = "∞";
+        String template = "Flight: {FORMATTED_TIME}";
+        String result = timeManager.regexString(template, 0, true);
+        assertEquals("Flight: ∞", result);
+    }
+
+    @Test
+    public void testRegexStringInfiniteTokensAndExplicitInfinity() {
+        V.infinity = "∞";
+        String template = "{DAYS}d {HOURS}h {MINUTES}m {SECONDS}s";
+        assertEquals("∞d ∞h ∞m ∞s", timeManager.regexString(template, 0, true));
+
+        String withExplicit = "Infinite: {INFINITY}";
+        assertEquals("Infinite: ∞", timeManager.regexString(withExplicit, 100, false));
+    }
+
+    @Test
     public void testDailyDateComparisonSameDay() {
         Calendar cal1 = Calendar.getInstance();
         cal1.set(2026, Calendar.AUGUST, 21, 10, 0, 0);
@@ -102,5 +120,19 @@ public class TimeManagerTest {
         DailyDate d2 = new DailyDate(cal2.getTimeInMillis());
 
         assertNotEquals(d1, d2);
+    }
+
+    @Test
+    public void testDailyDateComparisonSameDayOfWeekNextWeek() {
+        Calendar cal1 = Calendar.getInstance();
+        cal1.set(2026, Calendar.AUGUST, 21, 12, 0, 0); // Friday
+
+        Calendar cal2 = Calendar.getInstance();
+        cal2.set(2026, Calendar.AUGUST, 28, 12, 0, 0); // Next Friday (7 days later)
+
+        DailyDate d1 = new DailyDate(cal1.getTimeInMillis());
+        DailyDate d2 = new DailyDate(cal2.getTimeInMillis());
+
+        assertNotEquals(d1, d2, "Dates 7 days apart in same month must not be considered equal");
     }
 }

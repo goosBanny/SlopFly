@@ -218,6 +218,10 @@ public class FlightUser {
 	public void setInfiniteFlight(boolean enable) {
 		manager.getTempFly().getDataBridge().stageChange(DataPointer.of(DataValue.PLAYER_INFINITE, p.getUniqueId().toString()), enable);
 		this.infinite = enable;
+		this.cachedActionBarText = null;
+		this.cachedActionBarSecond = -1;
+		updateList(false);
+		updateName(false);
 		if (!enable && V.actionBar && time > 0) {
 			doActionBar();
 		} else if (!enable && time <= 0) {
@@ -225,6 +229,8 @@ public class FlightUser {
 			setAutoFly(true);
 		} else if (enable && hasAutoFlyQueued()) {
 			enableFlight();
+		} else if (enable && V.actionBar && p.isFlying()) {
+			doActionBar();
 		}
 	} 
 	
@@ -331,24 +337,35 @@ public class FlightUser {
 	 */
 	public void disableFlight(int delay, boolean fallSafely) {
 		Console.debug("------ disable flight -------");
-		if (!enabled) {return;}
-		enabled = false;
-		GameMode m = p.getGameMode();
-		updateList(true);
-		updateName(true);
-		// Fixes a weird bug where fall damage accumulates through flight and damages even when 1 block off the ground.
-		if (p.isFlying()) {p.setFallDistance(0);}
-		if (m == GameMode.CREATIVE && V.creativeTimer) {
-			Console.debug("--> set flying false 1");
-			p.setFlying(false);
-			p.setAllowFlight(false);
-		} else if (m != GameMode.CREATIVE && m != GameMode.SPECTATOR) {
-			Console.debug("--> set flying false 2");
-			p.setFlying(false);
-			p.setAllowFlight(false);
-			if (fallSafely) {addDamageProtection();}
+		boolean wasEnabled = this.enabled;
+		this.enabled = false;
+		if (!wasEnabled && !p.isFlying() && !p.getAllowFlight()) {
+			return;
 		}
-		if (delay > -1) {enforce(delay);}
+		Runnable action = () -> {
+			if (!p.isOnline()) return;
+			GameMode m = p.getGameMode();
+			updateList(true);
+			updateName(true);
+			// Fixes a weird bug where fall damage accumulates through flight and damages even when 1 block off the ground.
+			if (p.isFlying()) {p.setFallDistance(0);}
+			if (m == GameMode.CREATIVE && V.creativeTimer) {
+				Console.debug("--> set flying false 1");
+				p.setFlying(false);
+				p.setAllowFlight(false);
+			} else if (m != GameMode.CREATIVE && m != GameMode.SPECTATOR) {
+				Console.debug("--> set flying false 2");
+				p.setFlying(false);
+				p.setAllowFlight(false);
+				if (fallSafely) {addDamageProtection();}
+			}
+			if (delay > -1) {enforce(delay);}
+		};
+		if (Bukkit.isPrimaryThread()) {
+			action.run();
+		} else {
+			Bukkit.getScheduler().runTask(manager.getTempFly(), action);
+		}
 	}
 	
 	/**
@@ -362,15 +379,24 @@ public class FlightUser {
 			setAutoFly(true);
 			return false;
 		}
-		if (time == 0 && !hasInfiniteFlight()) {
+		if (time <= 0 && !hasInfiniteFlight()) {
 			setAutoFly(true);
 			return false;
 		}
 		Console.debug("--> set flying true");
 		enabled = true;
-		p.setAllowFlight(true);
-		p.setFlying(!p.isOnGround());
-		applySpeedCorrect(true, 0);
+		Runnable action = () -> {
+			if (p.isOnline() && enabled) {
+				p.setAllowFlight(true);
+				p.setFlying(!p.isOnGround());
+				applySpeedCorrect(true, 0);
+			}
+		};
+		if (Bukkit.isPrimaryThread()) {
+			action.run();
+		} else {
+			Bukkit.getScheduler().runTask(manager.getTempFly(), action);
+		}
 		return true;
 	}
 	
@@ -520,7 +546,7 @@ public class FlightUser {
 				&& manager.getTempFly().getHookManager().hasRegionProvider()) {
 			results.add(requirement.handleFlightInquiry(this, environment.getCurrentRegionSet()));
 		}
-		return submitFlightResults(results, hasFlightEnabled()) && hasFlightRequirement(requirement);
+		return submitFlightResults(results, hasFlightEnabled()) && !hasFlightRequirement(requirement);
 	}
 	
 	
@@ -695,13 +721,13 @@ public class FlightUser {
 	public String getListPlaceholder() {
 		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.listPlaceholderOn : V.listPlaceholderOff)
 				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", listName), time);
+				.replaceAll("\\{OLD_TAG}", listName), time, hasInfiniteFlight());
 	}
 	
 	public String getTagPlaceholder() {
 		return timeManager.regexString((p.isFlying() && hasFlightEnabled() ? V.tagPlaceholderOn : V.tagPlaceholderOff)
 				.replaceAll("\\{PLAYER}", p.getName())
-				.replaceAll("\\{OLD_TAG}", tagName), time);
+				.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight());
 	}
 	
 	private void updateList(boolean reset) {
@@ -709,7 +735,7 @@ public class FlightUser {
 		p.setPlayerListName(!p.isFlying() || reset
 				? listName : timeManager.regexString(V.listName
 						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), time));
+						.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight()));
 	}
 	
 	private void updateName(boolean reset) {
@@ -717,11 +743,21 @@ public class FlightUser {
 		p.setDisplayName(!p.isFlying() || reset
 				? tagName : timeManager.regexString(V.tagName
 						.replaceAll("\\{PLAYER}", p.getName())
-						.replaceAll("\\{OLD_TAG}", tagName), time));
+						.replaceAll("\\{OLD_TAG}", tagName), time, hasInfiniteFlight()));
 	}
 	
+	private String cachedActionBarText;
+	private long cachedActionBarSecond = -1;
+
 	public void doActionBar() {
-		p.sendActionBar(timeManager.regexString(V.actionText, getTime()));
+		if (p == null || !p.isOnline()) return;
+		boolean inf = hasInfiniteFlight();
+		long roundedSec = inf ? -999999L : (long) Math.ceil(time);
+		if (cachedActionBarText == null || cachedActionBarSecond != roundedSec) {
+			cachedActionBarSecond = roundedSec;
+			cachedActionBarText = timeManager.regexString(V.actionText, getTime(), inf);
+		}
+		p.sendActionBar(cachedActionBarText);
 	}
 	
 	
@@ -743,7 +779,7 @@ public class FlightUser {
 	}
 	
 	public boolean hasSpeedPreference() {
-		return selectedSpeed > -1 && manager.getFlightEnvironment().allowSpeedPreference();
+		return selectedSpeed > 0 && manager.getFlightEnvironment().allowSpeedPreference();
 	}
 	
 	/**
@@ -809,27 +845,33 @@ public class FlightUser {
 		
 		// Permissions for region speed take priority
 		float finSpeed = getMaxSpeed(regions);
-		if (finSpeed != -999) {
+		if (finSpeed > 0) {
 			Console.debug("2: " + finSpeed);
 			return finSpeed;
 		} else if (env.hasMaxSpeed(regions)) {
-			Console.debug("4: " + env.getMaxSpeed(regions));
-			return env.getMaxSpeed(regions);
+			float rSpeed = env.getMaxSpeed(regions);
+			if (rSpeed > 0) {
+				Console.debug("4: " + rSpeed);
+				return rSpeed;
+			}
 		}
 		
 		// Permissions for world speed go next
 		finSpeed = getMaxSpeed(p.getWorld());
-		if (finSpeed != -999) {
+		if (finSpeed > 0) {
 			Console.debug("3: " + finSpeed);
 			return finSpeed;
 		} else if (env.hasMaxSpeed(p.getWorld())) {
-			Console.debug("4: " + env.getMaxSpeed(p.getWorld()));
-			return env.getMaxSpeed(p.getWorld());
+			float wSpeed = env.getMaxSpeed(p.getWorld());
+			if (wSpeed > 0) {
+				Console.debug("4: " + wSpeed);
+				return wSpeed;
+			}
 		}
 		
 		// return default environment speed indicator
-		Console.debug("5: " + env.getDefaultSpeed());
-		return env.getDefaultSpeed();
+		float defSpeed = env.getDefaultSpeed();
+		return defSpeed > 0 ? defSpeed : 1f;
 	}
 	
 	public float getMaxSpeed(World world) {
@@ -912,6 +954,9 @@ public class FlightUser {
 		doIdentifier();
 		
 		if (hasInfiniteFlight()) {
+			if (V.actionBar && p.isFlying()) {
+				doActionBar();
+			}
 			return;
 		}
 		

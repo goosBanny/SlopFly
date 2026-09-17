@@ -43,7 +43,6 @@ public class StructureProximity implements RequirementProvider {
 		for (Entry<StructureType, Integer> entry: structs.entrySet()) {
 			Location closest = world.locateNearestStructure(loc, entry.getKey(), entry.getValue(), false);
 			if (closest != null) {
-				Bukkit.broadcastMessage(String.valueOf(closest.distanceSquared(loc)));
 				return new ResultDeny(DenyReason.OTHER, this, InquiryType.LOCATION, 
 						V.requireFailStruct
 						.replaceAll("\\{STRUCTURE}", entry.getKey().getName()), !V.damageStruct);

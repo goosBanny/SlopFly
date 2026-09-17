@@ -287,7 +287,28 @@ public class TimeManager implements Listener {
 	}
 	
 	public String regexString(String s, double seconds) {
+		return regexString(s, seconds, false);
+	}
+
+	public String regexString(String s, double seconds, boolean infinite) {
 		if (s == null || s.isEmpty()) return "";
+		String infSym = V.infinity != null ? V.infinity : "∞";
+		if (s.contains("{INFINITY}")) {
+			s = s.replace("{INFINITY}", infSym);
+		}
+		if (infinite) {
+			if (s.contains("{FORMATTED_TIME}")) {
+				s = s.replace("{FORMATTED_TIME}", infSym);
+			}
+			if (s.contains("{TIME_FORMATTED}")) {
+				s = s.replace("{TIME_FORMATTED}", infSym);
+			}
+			if (s.contains("{DAYS}")) s = s.replace("{DAYS}", infSym);
+			if (s.contains("{HOURS}")) s = s.replace("{HOURS}", infSym);
+			if (s.contains("{MINUTES}")) s = s.replace("{MINUTES}", infSym);
+			if (s.contains("{SECONDS}")) s = s.replace("{SECONDS}", infSym);
+			return s;
+		}
 		//We dont care about the decimal here, it is only used internally for relative time regions.
 		long
 		days = formatTime(TimeUnit.DAYS, Math.ceil(seconds)),
@@ -295,7 +316,7 @@ public class TimeManager implements Listener {
 		minutes = formatTime(TimeUnit.MINUTES, Math.ceil(seconds)),
 		secs = formatTime(TimeUnit.SECONDS, Math.ceil(seconds));
 		
-		if (s.contains("{FORMATTED_TIME}")) {
+		if (s.contains("{FORMATTED_TIME}") || s.contains("{TIME_FORMATTED}")) {
 			StringBuilder sb = new StringBuilder();
 			boolean addSpace = false;
 			if (days > 0) {
@@ -313,7 +334,8 @@ public class TimeManager implements Listener {
 			if (secs > 0 || sb.length() == 0) {
 				regexA(sb, secs, V.unitSeconds, addSpace);
 			}
-			s = s.replace("{FORMATTED_TIME}", sb.toString());
+			String formatted = sb.toString();
+			s = s.replace("{FORMATTED_TIME}", formatted).replace("{TIME_FORMATTED}", formatted);
 		}
 		if (s.contains("{DAYS}")) s = s.replace("{DAYS}", String.valueOf(days));
 		if (s.contains("{HOURS}")) s = s.replace("{HOURS}", String.valueOf(hours));
@@ -349,9 +371,15 @@ public class TimeManager implements Listener {
 		if (user == null) {
 			return "broken message";
 		}
+		boolean infinite = user.hasInfiniteFlight();
+		String infSym = V.infinity != null ? V.infinity : "∞";
+
 		switch (type) {
 		case TIME_FORMATTED:
 		{
+			if (infinite) {
+				return infSym;
+			}
 			long
 			days = formatTime(TimeUnit.DAYS, supply),
 			hours = formatTime(TimeUnit.HOURS, supply),
@@ -359,33 +387,34 @@ public class TimeManager implements Listener {
 			seconds = formatTime(TimeUnit.SECONDS, supply);
 			
 			StringBuilder sb = new StringBuilder();
-			if (user.hasInfiniteFlight()) {
-				sb.append(V.infinity);
-			} else {
-				if (days > 0) 
-					sb.append(V.fbDays.replace("{DAYS}", String.valueOf(days)));
-				if (hours > 0) 
-					sb.append(V.fbHours.replace("{HOURS}", String.valueOf(hours)));
-				if (minutes > 0) 
-					sb.append(V.fbMinutes.replace("{MINUTES}", String.valueOf(minutes)));
-				if (seconds > 0 || sb.length() == 0) 
-					sb.append(V.fbSeconds.replace("{SECONDS}", String.valueOf(seconds)));
-			}
+			if (days > 0) 
+				sb.append(V.fbDays.replace("{DAYS}", String.valueOf(days)));
+			if (hours > 0) 
+				sb.append(V.fbHours.replace("{HOURS}", String.valueOf(hours)));
+			if (minutes > 0) 
+				sb.append(V.fbMinutes.replace("{MINUTES}", String.valueOf(minutes)));
+			if (seconds > 0 || sb.length() == 0) 
+				sb.append(V.fbSeconds.replace("{SECONDS}", String.valueOf(seconds)));
 			return sb.toString();
 		}
 		case TIME_DAYS:
+			if (infinite) return infSym;
 			long days = formatTime(TimeUnit.DAYS, supply);
 			return String.valueOf(days);
 		case TIME_HOURS:
+			if (infinite) return infSym;
 			long hours = formatTime(TimeUnit.HOURS, supply);
 			return String.valueOf(hours);
 		case TIME_MINUTES:
+			if (infinite) return infSym;
 			long minutes = formatTime(TimeUnit.MINUTES, supply);
 			return String.valueOf(minutes);
 		case TIME_SECONDS:
+			if (infinite) return infSym;
 			long seconds = formatTime(TimeUnit.SECONDS, supply);
 			return String.valueOf(seconds);
 		case TIME_SECONDS_TOTAL:
+			if (infinite) return infSym;
 			return String.valueOf((int)Math.floor(supply));
 		default:
 			break;

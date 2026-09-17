@@ -47,7 +47,7 @@ public class UserLoader implements Runnable {
 		
 		if (bridge.hasSqlEnabled()) {
 			try (java.sql.Connection conn = bridge.getConnection();
-			     PreparedStatement st = conn.prepareStatement("INSERT IGNORE INTO tempfly_data(uuid) VALUES(?)")) {
+			     PreparedStatement st = conn.prepareStatement(bridge.getInsertIgnoreQuery("tempfly_data", "uuid", "?"))) {
 				st.setString(1, u.toString());
 				st.executeUpdate();
 			} catch (SQLException e) {
@@ -64,6 +64,9 @@ public class UserLoader implements Runnable {
 		logged = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_FLIGHT_LOG, u.toString()), false);
 		compatLogged = (boolean) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_COMPAT_FLIGHT_LOG, u.toString()), false);
 		selectedSpeed = (double) bridge.getOrDefault(DataPointer.of(DataValue.PLAYER_SPEED, u.toString()), -999D);
+		if (selectedSpeed <= 0 && selectedSpeed != -999D) {
+			selectedSpeed = -999D;
+		}
 		ready = true;
 		if (async) {
 			manager.addUser(Bukkit.getPlayer(u));

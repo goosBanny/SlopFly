@@ -59,7 +59,12 @@ public class CmdTime extends TimeCommand {
 		U.m(s, manager.regexString(V.infoPlayer, time).replaceAll("\\{PLAYER}", p.getName()));
 		final boolean infinite = p.isOnline() && tempfly.getFlightManager().getUser((Player)p).hasInfiniteFlight(); 
 		if (infinite) {
-			U.m(s, V.infoInfinite);
+			String infMsg = manager.regexString(V.infoInfinite, time, true);
+			String infSym = V.infinity != null ? V.infinity : "∞";
+			if (!infMsg.contains(infSym) && !infMsg.contains("∞")) {
+				infMsg = infMsg + " " + infSym;
+			}
+			U.m(s, infMsg);
 		}
 		long days = manager.formatTime(TimeUnit.DAYS, time);
 		if (days > 0) {

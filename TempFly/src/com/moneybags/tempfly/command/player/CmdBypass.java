@@ -34,6 +34,7 @@ public class CmdBypass extends TempFlyCommand {
 			switch (args[1].toLowerCase()) {
 			case "on": case "enable":
 				toggleVal = true;
+				break;
 			case "off": case "disable":
 				break;
 			default:

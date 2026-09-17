@@ -102,6 +102,17 @@ public class MvdWAPI {
 					return null;
 				} 
 			  });
+			  PlaceholderAPI.registerPlaceholder(tempfly, "tempfly_infinite", new PlaceholderReplacer() {
+				@Override
+				public String onPlaceholderReplace(PlaceholderReplaceEvent e) {
+					Player p = e.getPlayer();
+					if (p != null && p.isOnline()){
+						com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+						return u != null && u.hasInfiniteFlight() ? (com.moneybags.tempfly.util.V.infinity != null ? com.moneybags.tempfly.util.V.infinity : "∞") : "";
+					}
+					return null;
+				} 
+			  });
 		}
 	}
 }

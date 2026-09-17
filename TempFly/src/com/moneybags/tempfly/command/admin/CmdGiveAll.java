@@ -51,7 +51,7 @@ public class CmdGiveAll extends TimeCommand {
 			new AsyncTimeParameters(tempfly, this, s, p, amount2).runAsync();
 			U.m((Player)p, manager.regexString(V.timeGivenSelf, amount2));
 		}
-		U.m(s, manager.regexString(V.timeGivenSelf, amount));
+		U.m(s, manager.regexString(V.timeGivenAll, amount));
 	}
 
 	@Override

@@ -51,9 +51,11 @@ system:
   # If true this will disable all tab completions for tempfly commands
   # Can be bypassed with tempfly.disable_tab.bypass
   disable_tab: false
-  # database
+  # Storage type for player data: SQLITE, YAML, or MYSQL
+  # Default is SQLITE.
+  storage-type: SQLITE
+  # database (only used when storage-type is MYSQL)
   mysql:
-    enabled: false
     host: "127.0.0.1"
     port: 3306
     name: "name"

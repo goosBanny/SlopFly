@@ -19,7 +19,13 @@ public class DailyDate extends Date {
 		}
 		Date date = (Date) o;
 		
-		return date.getDay() == this.getDay() && date.getMonth() == this.getMonth() && date.getYear() == this.getYear();
+		return date.getDate() == this.getDate() && date.getMonth() == this.getMonth() && date.getYear() == this.getYear();
+	}
+
+	@SuppressWarnings("deprecation")
+	@Override
+	public int hashCode() {
+		return (getYear() * 10000) + (getMonth() * 100) + getDate();
 	}
 
 }

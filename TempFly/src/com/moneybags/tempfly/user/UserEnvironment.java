@@ -29,6 +29,7 @@ public class UserEnvironment {
 	private final List<RelativeTimeRegion> rtRegions = new ArrayList<>();
 	private RelativeTimeRegion rtWorld;
 	private RelativeTimeRegion[] cachedRtArray = EMPTY_RT_REGIONS;
+	private CompatRegion[] cachedRegionArray = EMPTY_REGIONS;
 
 	public UserEnvironment(FlightUser user, FlightEnvironment environment, CompatRegion[] initialRegions) {
 		this.user = user;
@@ -36,6 +37,7 @@ public class UserEnvironment {
 		if (initialRegions != null) {
 			encompassing.addAll(Arrays.asList(initialRegions));
 		}
+		cachedRegionArray = encompassing.isEmpty() ? EMPTY_REGIONS : encompassing.toArray(EMPTY_REGIONS);
 		if (environment != null) {
 			asessRtRegions();
 			asessRtWorld();
@@ -52,6 +54,7 @@ public class UserEnvironment {
 				user.getFlightManager().getTempFly().getHookManager().hasRegionProvider()
 				? user.getFlightManager().getTempFly().getHookManager().getRegionProvider().getApplicableRegions(user.getPlayer().getLocation())
 				: EMPTY_REGIONS));
+		cachedRegionArray = encompassing.isEmpty() ? EMPTY_REGIONS : encompassing.toArray(EMPTY_REGIONS);
 		
 		StringBuilder builder = new StringBuilder();
 		encompassing.stream().forEach(rg -> builder.append(rg.getId() + ", "));
@@ -77,7 +80,7 @@ public class UserEnvironment {
 	
 	
 	public CompatRegion[] getCurrentRegionSet() {
-		return encompassing.toArray(EMPTY_REGIONS);
+		return cachedRegionArray;
 	}
 	
 	public void updateCurrentRegionSet(CompatRegion[] regions) {
@@ -85,6 +88,7 @@ public class UserEnvironment {
 		if (regions != null) {
 			this.encompassing.addAll(Arrays.asList(regions));
 		}
+		this.cachedRegionArray = encompassing.isEmpty() ? EMPTY_REGIONS : encompassing.toArray(EMPTY_REGIONS);
 		asessRtRegions();
 		asessInfiniteFlight();
 	}

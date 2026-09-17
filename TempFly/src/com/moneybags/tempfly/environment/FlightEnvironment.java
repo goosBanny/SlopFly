@@ -187,7 +187,7 @@ public class FlightEnvironment implements RequirementProvider {
 	}
 	
 	public float getDefaultSpeed() {
-		return speedGlobal;
+		return speedGlobal > 0 ? speedGlobal : 1f;
 	}
 	
 	public float getMaxSpeed(World world) {
@@ -296,7 +296,7 @@ public class FlightEnvironment implements RequirementProvider {
 	 */
 	@Override
 	public FlightResult handleFlightInquiry(FlightUser user, Location loc) {
-		if (loc == null) {
+		if (loc == null || V.maxY <= 0) {
 			return new ResultAllow(this, InquiryType.LOCATION, V.requirePassDefault);
 		}
 		if (user.hasFlightRequirement(this, InquiryType.LOCATION)) {
@@ -362,8 +362,11 @@ public class FlightEnvironment implements RequirementProvider {
 		// legacy default speed.
 		speedGlobal = (float) Files.config.getDouble("general.flight.default_speed");
 		// new default speed.
-		if (speedGlobal == 0) {
+		if (speedGlobal <= 0) {
 			speedGlobal = (float) Files.config.getDouble("general.flight.speed.default", 1);
+		}
+		if (speedGlobal <= 0) {
+			speedGlobal = 1f;
 		}
 		
 		allowPreferredSpeed = Files.config.getBoolean("general.flight.speed.user_preference", true);

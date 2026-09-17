@@ -98,4 +98,15 @@ public class FlightSpeedTest {
 
         assertEquals(-999f, speed, 0.001f);
     }
+
+    @Test
+    public void testZeroAndNegativeSpeedsIgnoredInPermission() {
+        Set<PermissionAttachmentInfo> perms = new HashSet<>();
+        perms.add(new PermissionAttachmentInfo(permissible, "tempfly.speed.world.survival.0", null, true));
+        perms.add(new PermissionAttachmentInfo(permissible, "tempfly.speed.world.survival.-1", null, true));
+
+        float speed = FlightUser.calculatePermissionSpeed(perms, "world.survival", "world.*");
+
+        assertEquals(-999f, speed, 0.001f);
+    }
 }

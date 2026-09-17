@@ -36,13 +36,31 @@ import com.moneybags.tempfly.hook.HookManager.Genre;
 import com.moneybags.tempfly.util.Console;
 import com.moneybags.tempfly.util.U;
 import com.moneybags.tempfly.util.V;
+import javax.sql.DataSource;
 import com.mysql.cj.jdbc.MysqlConnectionPoolDataSource;
 import com.mysql.cj.jdbc.MysqlDataSource;
 
 public class DataBridge implements DataFileHolder {
 
+	public static enum StorageType {
+		SQLITE,
+		MYSQL,
+		YAML;
+
+		public static StorageType fromString(String str) {
+			if (str != null) {
+				try {
+					return StorageType.valueOf(str.trim().toUpperCase(java.util.Locale.ROOT));
+				} catch (IllegalArgumentException ignored) {
+				}
+			}
+			return SQLITE;
+		}
+	}
+
 	private TempFly tempfly;
-	private MysqlDataSource dataSource;
+	private StorageType storageType = StorageType.SQLITE;
+	private DataSource dataSource;
 
 	private File dataf;
 	private FileConfiguration data;
@@ -57,41 +75,106 @@ public class DataBridge implements DataFileHolder {
 	// database or YAML file.
 	private final Map<DataPointer, StagedChange> changes = new ConcurrentHashMap<>();
 
-	public MysqlDataSource getDataSource() {
+	public DataSource getDataSource() {
 		return dataSource;
 	}
 
+	public StorageType getStorageType() {
+		return storageType;
+	}
+
+	public boolean isSqlite() {
+		return storageType == StorageType.SQLITE;
+	}
+
+	public boolean isMysql() {
+		return storageType == StorageType.MYSQL;
+	}
+
+	public boolean isYaml() {
+		return storageType == StorageType.YAML;
+	}
+
 	public boolean hasSqlEnabled() {
-		return dataSource != null;
+		return dataSource != null && (storageType == StorageType.SQLITE || storageType == StorageType.MYSQL);
+	}
+
+	public String getInsertIgnoreQuery(String table, String columns, String values) {
+		if (isSqlite()) {
+			return "INSERT OR IGNORE INTO " + table + "(" + columns + ") VALUES(" + values + ")";
+		} else {
+			return "INSERT IGNORE INTO " + table + "(" + columns + ") VALUES(" + values + ")";
+		}
 	}
 
 	public boolean connectSql() throws SQLException {
-		String host = Files.config.getString("system.mysql.host"),
-				name = Files.config.getString("system.mysql.name"),
-				user = Files.config.getString("system.mysql.user"),
-				pass = Files.config.getString("system.mysql.pass");
+		if (storageType == StorageType.SQLITE) {
+			return connectSqlite();
+		} else if (storageType == StorageType.MYSQL) {
+			return connectMysql();
+		}
+		return false;
+	}
 
-		MysqlDataSource dataSource = new MysqlConnectionPoolDataSource();
-		dataSource.setServerName(host);
-		dataSource.setPortNumber(Files.config.getInt("system.mysql.port"));
-		dataSource.setDatabaseName(name);
-		dataSource.setUser(user);
-		dataSource.setPassword(pass);
+	public boolean connectSqlite() throws SQLException {
+		File dbFile = new File(tempfly.getDataFolder(), "tempfly.db");
+		if (dbFile.getParentFile() != null && !dbFile.getParentFile().exists()) {
+			dbFile.getParentFile().mkdirs();
+		}
+		try {
+			Class.forName("org.sqlite.JDBC");
+		} catch (ClassNotFoundException e) {
+			Console.severe("SQLite JDBC driver was not found!");
+			return false;
+		}
 
-		try (Connection conn = dataSource.getConnection()) {
+		org.sqlite.SQLiteDataSource ds = new org.sqlite.SQLiteDataSource();
+		ds.setUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+
+		try (Connection conn = ds.getConnection()) {
 			if (!conn.isValid(1)) {
-				Console.severe("Could not establish a connection to the database!");
+				Console.severe("Could not establish a connection to the SQLite database!");
 				return false;
 			}
 		}
 
-		this.dataSource = dataSource;
+		this.dataSource = ds;
+		Console.info("Connected to SQLite database: " + dbFile.getName());
+		return true;
+	}
+
+	public boolean connectMysql() throws SQLException {
+		String host = Files.config.getString("system.mysql.host", "127.0.0.1"),
+				name = Files.config.getString("system.mysql.name", "name"),
+				user = Files.config.getString("system.mysql.user", "user"),
+				pass = Files.config.getString("system.mysql.pass", "pass");
+
+		MysqlDataSource ds = new MysqlConnectionPoolDataSource();
+		ds.setServerName(host);
+		ds.setPortNumber(Files.config.getInt("system.mysql.port", 3306));
+		ds.setDatabaseName(name);
+		ds.setUser(user);
+		ds.setPassword(pass);
+
+		try (Connection conn = ds.getConnection()) {
+			if (!conn.isValid(1)) {
+				Console.severe("Could not establish a connection to the MySQL database!");
+				return false;
+			}
+		}
+
+		this.dataSource = ds;
+		Console.info("Connected to MySQL database at " + host + ":" + Files.config.getInt("system.mysql.port", 3306));
 		return true;
 	}
 
 	private void initDb() throws IOException, SQLException {
 		String setup;
 		try (InputStream in = tempfly.getResource("dbsetup.sql")) {
+			if (in == null) {
+				Console.severe("Could not find dbsetup.sql resource!");
+				return;
+			}
 			setup = new BufferedReader(new InputStreamReader(in)).lines().collect(Collectors.joining("\n"));
 		}
 		String[] queries = setup.split(";");
@@ -103,23 +186,40 @@ public class DataBridge implements DataFileHolder {
 				stmt.execute();
 			}
 		}
-		Console.info("§2Database setup complete.");
+		Console.info("§2Database setup complete (" + storageType + ").");
 	}
 
 	public DataBridge() {
 		this.data = new YamlConfiguration();
-		this.executor = Executors.newCachedThreadPool();
+		this.storageType = StorageType.YAML;
+		this.executor = Executors.newSingleThreadExecutor(r -> {
+			Thread t = new Thread(r, "TempFly-DataBridge-Worker");
+			t.setDaemon(true);
+			return t;
+		});
 	}
 
 	public DataBridge(TempFly tempfly) throws IOException, SQLException {
 		this.tempfly = tempfly;
-		if (Files.config.getBoolean("system.mysql.enabled")) {
-			connectSql();
-			initDb();
+		this.storageType = StorageType.fromString(V.storageType);
+		Console.info("Initializing TempFly storage: " + storageType);
+
+		if (storageType == StorageType.SQLITE || storageType == StorageType.MYSQL) {
+			try {
+				if (connectSql()) {
+					initDb();
+				}
+			} catch (Exception e) {
+				Console.severe("Failed to initialize database (" + storageType + ")! Falling back to YAML.");
+				e.printStackTrace();
+				this.storageType = StorageType.YAML;
+				this.dataSource = null;
+			}
 		}
 
 		// If connection is null we will default to yaml storage.
 		if (!hasSqlEnabled()) {
+			this.storageType = StorageType.YAML;
 			dataf = new File(tempfly.getDataFolder(), "data.yml");
 			if (!dataf.exists()) {
 				dataf.getParentFile().mkdirs();
@@ -132,10 +232,14 @@ public class DataBridge implements DataFileHolder {
 				Console.severe(
 						"There is a problem inside the data.yml, If you cannot fix the issue, please contact the developer.");
 				e1.printStackTrace();
-			}
+				}
 			formatYamlData(tempfly);
 		}
-		this.executor = Executors.newCachedThreadPool();
+		this.executor = Executors.newSingleThreadExecutor(r -> {
+			Thread t = new Thread(r, "TempFly-DataBridge-Worker");
+			t.setDaemon(true);
+			return t;
+		});
 	}
 
 	/**
@@ -427,6 +531,18 @@ public class DataBridge implements DataFileHolder {
 				st.setString(1, path[0]);
 				try (ResultSet result = st.executeQuery()) {
 					if (result.next()) {
+						Class<?> type = value.getType();
+						if (type.equals(Boolean.TYPE) || type.equals(Boolean.class)) {
+							return result.getBoolean(value.getSqlColumn());
+						} else if (type.equals(Double.TYPE) || type.equals(Double.class)) {
+							return result.getDouble(value.getSqlColumn());
+						} else if (type.equals(Long.TYPE) || type.equals(Long.class)) {
+							return result.getLong(value.getSqlColumn());
+						} else if (type.equals(Integer.TYPE) || type.equals(Integer.class)) {
+							return result.getInt(value.getSqlColumn());
+						} else if (type.equals(String.class)) {
+							return result.getString(value.getSqlColumn());
+						}
 						return result.getObject(value.getSqlColumn());
 					}
 				}
@@ -443,11 +559,38 @@ public class DataBridge implements DataFileHolder {
 			e.printStackTrace();
 			return def;
 		}
+		if (object == null) {
+			return def;
+		}
+		Class<?> expectedType = pointer.getValue().getType();
+		if (expectedType != null) {
+			if (expectedType.equals(Boolean.TYPE) || expectedType.equals(Boolean.class)) {
+				if (object instanceof Boolean) {
+					return object;
+				} else if (object instanceof Number) {
+					return ((Number) object).intValue() != 0;
+				} else if (object instanceof String) {
+					return Boolean.parseBoolean((String) object);
+				}
+			} else if (expectedType.equals(Long.TYPE) || expectedType.equals(Long.class)) {
+				if (object instanceof Number) {
+					return ((Number) object).longValue();
+				}
+			} else if (expectedType.equals(Double.TYPE) || expectedType.equals(Double.class)) {
+				if (object instanceof Number) {
+					return ((Number) object).doubleValue();
+				}
+			} else if (expectedType.equals(Integer.TYPE) || expectedType.equals(Integer.class)) {
+				if (object instanceof Number) {
+					return ((Number) object).intValue();
+				}
+			}
+		}
 		if (V.debug) {
 			Console.debug("", "-----Data Bridge Get or Default Value-----", "--|> Got: " + object,
-					"--|> Returning: " + String.valueOf(object == null ? def : object));
+					"--|> Returning: " + String.valueOf(object));
 		}
-		return object == null ? def : object;
+		return object;
 	}
 
 	public Map<String, Object> getValues(DataTable table, String yamlPathTo, String row, String... extra) {
@@ -525,15 +668,30 @@ public class DataBridge implements DataFileHolder {
 					PreparedStatement st = conn.prepareStatement(
 							"UPDATE " + value.getTable().getSqlTable() + " SET " + value.getSqlColumn()
 									+ " = ? WHERE " + value.getTable().getPrimaryKey() + " = ?")) {
-				Class<?> type = value.getType();
-				if (type.equals(Boolean.TYPE)) {
-					st.setBoolean(1, (boolean) change.getData());
-				} else if (type.equals(Double.TYPE)) {
-					st.setDouble(1, (double) change.getData());
-				} else if (type.equals(String.class)) {
-					st.setString(1, (String) change.getData());
-				} else if (type.equals(Long.TYPE)) {
-					st.setLong(1, (long) change.getData());
+				Object data = change.getData();
+				if (data == null) {
+					st.setObject(1, null);
+				} else {
+					Class<?> type = value.getType();
+					if (type.equals(Boolean.TYPE) || type.equals(Boolean.class)) {
+						if (data instanceof Boolean) {
+							st.setBoolean(1, (Boolean) data);
+						} else if (data instanceof Number) {
+							st.setBoolean(1, ((Number) data).intValue() != 0);
+						} else {
+							st.setBoolean(1, Boolean.parseBoolean(data.toString()));
+						}
+					} else if (type.equals(Double.TYPE) || type.equals(Double.class)) {
+						st.setDouble(1, ((Number) data).doubleValue());
+					} else if (type.equals(String.class)) {
+						st.setString(1, data.toString());
+					} else if (type.equals(Long.TYPE) || type.equals(Long.class)) {
+						st.setLong(1, ((Number) data).longValue());
+					} else if (type.equals(Integer.TYPE) || type.equals(Integer.class)) {
+						st.setInt(1, ((Number) data).intValue());
+					} else {
+						st.setObject(1, data);
+					}
 				}
 				st.setString(2, path[0]);
 				st.executeUpdate();

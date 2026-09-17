@@ -20,7 +20,7 @@ public class CmdInfinite extends TempFlyCommand {
 	
 	@Override
 	public void executeAs(CommandSender s) {
-		if (!U.hasPermission(s, "tempfly.infinite.toggle")) {
+		if (!U.hasPermission(s, "tempfly.infinite.toggle") || !U.hasPermission(s, "tempfly.infinite")) {
 			U.m(s, V.invalidPermission);
 			return;
 		}

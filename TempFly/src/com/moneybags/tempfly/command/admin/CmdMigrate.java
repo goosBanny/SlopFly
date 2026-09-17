@@ -86,7 +86,7 @@ public class CmdMigrate extends TempFlyCommand{
 				String[] path = new String[] {key};
 			
 				try (Connection conn = tempfly.getDataBridge().getConnection();
-				     PreparedStatement stCreate = conn.prepareStatement("INSERT IGNORE INTO tempfly_data(uuid) VALUES(?)")) {
+				     PreparedStatement stCreate = conn.prepareStatement(tempfly.getDataBridge().getInsertIgnoreQuery("tempfly_data", "uuid", "?"))) {
 					stCreate.setString(1, key);
 					stCreate.executeUpdate();
 				} catch (SQLException e) {
@@ -138,7 +138,7 @@ public class CmdMigrate extends TempFlyCommand{
 				}
 				count++;
 			}
-			s.sendMessage("Successfully migrated " + count + " player records to MySQL!");
+			s.sendMessage("Successfully migrated " + count + " player records to " + tempfly.getDataBridge().getStorageType() + "!");
 		});
 	}
 

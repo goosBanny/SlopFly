@@ -69,6 +69,12 @@ public class ClipAPI {
 				return p.isOnline() ? tempfly.getFlightManager().getUser(p).getListPlaceholder() : "";
 			case "name-tag":
 				return p.isOnline() ? tempfly.getFlightManager().getUser(p).getTagPlaceholder() : "";
+			case "infinite":
+			case "is-infinite":
+			{
+				com.moneybags.tempfly.user.FlightUser u = tempfly.getFlightManager().getUser(p);
+				return u != null && u.hasInfiniteFlight() ? (V.infinity != null ? V.infinity : "∞") : "";
+			}
 			default:
 				return "Invalid placeholder.. :( ";
 			}

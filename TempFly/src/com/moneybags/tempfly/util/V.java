@@ -166,6 +166,7 @@ public class V {
 
 	public static String movementMode;
 	public static int movementTaskInterval;
+	public static String storageType = "SQLITE";
 
 	public static boolean isMovementTaskMode() {
 		return "TASK".equalsIgnoreCase(movementMode);
@@ -343,6 +344,20 @@ public class V {
 			movementMode = "TASK";
 		}
 		movementTaskInterval = Math.max(1, config.getInt("movement.task-interval-ticks", 4));
+
+		if (config.contains("system.storage-type")) {
+			storageType = config.getString("system.storage-type", "SQLITE").toUpperCase();
+		} else if (config.contains("system.storage_type")) {
+			storageType = config.getString("system.storage_type", "SQLITE").toUpperCase();
+		} else if (config.getBoolean("system.mysql.enabled", false)) {
+			storageType = "MYSQL";
+		} else {
+			storageType = "SQLITE";
+		}
+		if (!"SQLITE".equals(storageType) && !"MYSQL".equals(storageType) && !"YAML".equals(storageType)) {
+			Console.warn("Invalid system.storage-type '" + storageType + "'! Defaulting to SQLITE.");
+			storageType = "SQLITE";
+		}
 
 		permaTimer = config.getBoolean("general.timer.constant");
 		groundTimer = config.getBoolean("general.timer.ground");

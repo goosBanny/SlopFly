@@ -1,10 +1,13 @@
 package com.moneybags.tempfly.hook.region.plugins;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -20,18 +23,23 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class WorldGuardHook implements RegionProvider {
 	
+	private static final CompatRegion[] EMPTY_REGIONS = new CompatRegion[0];
 	private boolean enabled;
 	
     private static Object worldGuard = null;
     private static Object worldGuardPlugin = null;
     private static Object regionContainer = null;
-    private static Method regionContainerGetMethod = null;
-    private static Method worldAdaptMethod = null;
-    private static Method regionManagerGetMethod = null;
-    private static Constructor<?> vectorConstructor = null;
-    private static Method vectorConstructorMethod = null;
+    private static MethodHandle regionContainerGetHandle = null;
+    private static MethodHandle worldAdaptHandle = null;
+    private static MethodHandle regionManagerGetHandle = null;
+    private static MethodHandle vectorConstructorHandle = null;
+    private static MethodHandle vectorConstructorMethodHandle = null;
+
+    private static final Map<String, RegionManager> regionManagerCache = new ConcurrentHashMap<>();
 
     public WorldGuardHook(TempFly tempfly) {
+        regionManagerCache.clear();
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
         try {
             Class<?> worldGuardClass = Class.forName("com.sk89q.worldguard.WorldGuard");
             Method getInstanceMethod = worldGuardClass.getMethod("getInstance");
@@ -52,8 +60,11 @@ public class WorldGuardHook implements RegionProvider {
                 
                 Class<?> worldEditWorldClass = Class.forName("com.sk89q.worldedit.world.World");
                 Class<?> worldEditAdapterClass = Class.forName("com.sk89q.worldedit.bukkit.BukkitAdapter");
-                worldAdaptMethod = worldEditAdapterClass.getMethod("adapt", World.class);
-                regionContainerGetMethod = regionContainer.getClass().getMethod("get", worldEditWorldClass);
+                Method worldAdaptMethod = worldEditAdapterClass.getMethod("adapt", World.class);
+                worldAdaptHandle = lookup.unreflect(worldAdaptMethod);
+
+                Method regionContainerGetMethod = regionContainer.getClass().getMethod("get", worldEditWorldClass);
+                regionContainerGetHandle = lookup.unreflect(regionContainerGetMethod);
             } catch (Exception ex) {
                 regionContainer = null;
                 return;
@@ -61,13 +72,13 @@ public class WorldGuardHook implements RegionProvider {
         } else {
             try {
 				regionContainer = ((WorldGuardPlugin) worldGuardPlugin).getClass().getMethod("getRegionContainer").invoke(((WorldGuardPlugin) worldGuardPlugin));
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-					| NoSuchMethodException | SecurityException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				return;
 			}
             try {
-                regionContainerGetMethod = regionContainer.getClass().getMethod("get", World.class);
+                Method regionContainerGetMethod = regionContainer.getClass().getMethod("get", World.class);
+                regionContainerGetHandle = lookup.unreflect(regionContainerGetMethod);
             } catch (Exception ex) {
                 regionContainer = null;
                 return;
@@ -75,13 +86,19 @@ public class WorldGuardHook implements RegionProvider {
         }
         try {
             Class<?> vectorClass = Class.forName("com.sk89q.worldedit.Vector");
-            vectorConstructor = vectorClass.getConstructor(Double.TYPE, Double.TYPE, Double.TYPE);
-            regionManagerGetMethod = RegionManager.class.getMethod("getApplicableRegions", vectorClass);
+            Constructor<?> vectorConstructor = vectorClass.getConstructor(Double.TYPE, Double.TYPE, Double.TYPE);
+            vectorConstructorHandle = lookup.unreflectConstructor(vectorConstructor);
+
+            Method regionManagerGetMethod = RegionManager.class.getMethod("getApplicableRegions", vectorClass);
+            regionManagerGetHandle = lookup.unreflect(regionManagerGetMethod);
         } catch (Exception ex) {
             try {
                 Class<?> vectorClass = Class.forName("com.sk89q.worldedit.math.BlockVector3");
-                vectorConstructorMethod = vectorClass.getMethod("at", Double.TYPE, Double.TYPE, Double.TYPE);
-                regionManagerGetMethod = RegionManager.class.getMethod("getApplicableRegions", vectorClass);
+                Method vectorConstructorMethod = vectorClass.getMethod("at", Double.TYPE, Double.TYPE, Double.TYPE);
+                vectorConstructorMethodHandle = lookup.unreflect(vectorConstructorMethod);
+
+                Method regionManagerGetMethod = RegionManager.class.getMethod("getApplicableRegions", vectorClass);
+                regionManagerGetHandle = lookup.unreflect(regionManagerGetMethod);
             } catch (Exception sodonewiththis) {
                 regionContainer = null;
                 return;
@@ -90,41 +107,47 @@ public class WorldGuardHook implements RegionProvider {
         enabled = worldGuardPlugin != null || worldGuard != null;
     }
 
+    public static void clearCache() {
+        regionManagerCache.clear();
+    }
+
     public RegionManager getRegionManager(World world) {
-        if (regionContainer == null || regionContainerGetMethod == null) return null;
-        RegionManager regionManager = null;
-        try {
-            if (worldAdaptMethod != null) {
-                Object worldEditWorld = worldAdaptMethod.invoke(null, world);
-                regionManager = (RegionManager)regionContainerGetMethod.invoke(regionContainer, worldEditWorld);
-            } else {
-                regionManager = (RegionManager)regionContainerGetMethod.invoke(regionContainer, world);
+        if (world == null || regionContainer == null || regionContainerGetHandle == null) return null;
+        return regionManagerCache.computeIfAbsent(world.getName(), wName -> {
+            try {
+                if (worldAdaptHandle != null) {
+                    Object worldEditWorld = worldAdaptHandle.invoke(world);
+                    return (RegionManager) regionContainerGetHandle.invoke(regionContainer, worldEditWorld);
+                } else {
+                    return (RegionManager) regionContainerGetHandle.invoke(regionContainer, world);
+                }
+            } catch (Throwable e) {
+                return null;
             }
-        } catch (Exception e) {}
-        return regionManager;
+        });
     }
 
     public ApplicableRegionSet getRegionSet(Location location) {
+        if (location == null || location.getWorld() == null) return null;
         RegionManager regionManager = getRegionManager(location.getWorld());
-        if (regionManager == null) return null;
+        if (regionManager == null || regionManagerGetHandle == null) return null;
         try {
-            Object vector = vectorConstructorMethod == null
-                    ? vectorConstructor.newInstance(location.getX(), location.getY(), location.getZ())
-                    : vectorConstructorMethod.invoke(null, location.getX(), location.getY(), location.getZ());
-            return (ApplicableRegionSet)regionManagerGetMethod.invoke(regionManager, vector);
-        } catch (Exception ex) {
-           
+            Object vector = vectorConstructorMethodHandle == null
+                    ? vectorConstructorHandle.invoke(location.getX(), location.getY(), location.getZ())
+                    : vectorConstructorMethodHandle.invoke(location.getX(), location.getY(), location.getZ());
+            return (ApplicableRegionSet) regionManagerGetHandle.invoke(regionManager, vector);
+        } catch (Throwable ex) {
+            return null;
         }
-        return null;
     }
     
     @Override
     public CompatRegion[] getApplicableRegions(Location loc) {
     	ApplicableRegionSet set = getRegionSet(loc);
-    	if (set == null) {
-    		return new CompatRegion[0];
+    	if (set == null || set.size() == 0) {
+    		return EMPTY_REGIONS;
     	}
-    	List<CompatRegion> list = new ArrayList<>();
+    	List<CompatRegion> list = new ArrayList<>(set.size());
     	for (ProtectedRegion r: set) {
     		list.add(new CompatRegion(r.getId()));
     	}

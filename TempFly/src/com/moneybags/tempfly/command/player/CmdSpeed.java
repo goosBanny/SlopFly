@@ -57,6 +57,10 @@ public class CmdSpeed extends TempFlyCommand {
 			} else {
 				try {
 					speed = Float.parseFloat(args[1]);
+					if (speed <= 0) {
+						U.m(s, V.invalidNumber);
+						return;
+					}
 				} catch (Exception e) {
 					U.m(s, V.invalidNumber);
 					return;
@@ -80,9 +84,9 @@ public class CmdSpeed extends TempFlyCommand {
 			}
 		}
 		U.m(p, V.flySpeedSelf
-				.replaceAll("\\{SPEED}", speed == -999 ? "DEFAULT" : result));
+			.replaceAll("\\{SPEED}", speed == -999 ? "DEFAULT" : result));
 		if (!s.equals(p)) {
-			if (fin < speed) {
+			if (fin < (speed / 10)) {
 				U.m(s, V.flySpeedLimitOther
 						.replaceAll("\\{SPEED}", result)
 						.replaceAll("\\{PLAYER}", p.getName()));

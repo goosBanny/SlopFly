@@ -98,7 +98,7 @@ public class FlightManager implements Listener, Reloadable {
 		int interval = Math.max(1, V.movementTaskInterval);
 		int sweepEvery = Math.max(1, Math.round(20f / (float) interval));
 
-		movementTask = Bukkit.getScheduler().runTaskTimer(tempfly, () -> {
+		movementTask = Bukkit.getScheduler().runTaskTimerAsynchronously(tempfly, () -> {
 			sweepTick++;
 			boolean sweep = sweepTick >= sweepEvery;
 			if (sweep) {
@@ -124,7 +124,9 @@ public class FlightManager implements Listener, Reloadable {
 
 				if (sameBlock) {
 					if (sweep) {
-						user.evaluateFlightRequirements(current, true);
+						if (user.hasFlightEnabled()) {
+							user.evaluateFlightRequirements(current, true);
+						}
 						notifyTerritoryHooks(p, current);
 					}
 					continue;
@@ -179,6 +181,7 @@ public class FlightManager implements Listener, Reloadable {
 
 	@Override
 	public void onTempflyReload() {
+		com.moneybags.tempfly.hook.region.plugins.WorldGuardHook.clearCache();
 		startTickTask();
 		startMovementTask();
 		for (RequirementProvider provider : providers) {
@@ -524,6 +527,7 @@ public class FlightManager implements Listener, Reloadable {
 	public void updateLocation(FlightUser user, Location from, Location to, boolean forceWorld, boolean forceRegion) {
 		if (V.bugInfiniteA) {
 			if (user.getPlayer().isFlying()
+					&& !user.hasInfiniteFlight()
 					&& !user.hasTimer()
 					&& !user.getPlayer().hasPermission("tempfly.workaround.infinite.bypass.fix_a")) {
 				user.enforce(0);
@@ -531,6 +535,7 @@ public class FlightManager implements Listener, Reloadable {
 		} else if (V.bugInfiniteB) {
 			Console.debug(0);
 			if (user.getPlayer().isFlying()
+					&& !user.hasInfiniteFlight()
 					&& !user.hasTimer()
 					&& !user.getPlayer().hasPermission("tempfly.workaround.infinite.bypass.fix_b")) {
 				if (!user.enableFlight()) {

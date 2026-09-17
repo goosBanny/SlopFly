@@ -61,7 +61,7 @@ general:
   info:
     header: "&8&m--------&dTime&8&m--------"
     player: "&fPlayer&7: &e{PLAYER}"
-    infinite: "&fInfinite: &c&lUser has unlimited flight!"
+    infinite: "&fInfinite: &b{INFINITY} &eUser has unlimited flight!"
     days: "&fDays&7: &e{DAYS}"
     hours: "&fHours&7: &e{HOURS}"
     minutes: "&fMinutes&7: &e{MINUTES}"
@@ -95,6 +95,7 @@ general:
       world: "{PREFIX} &cFlight is disabled in this world!"
       combat: "{PREFIX} &cYou are currently combat tagged!"
       height: "{PREFIX} &f{MAX_Y} &cis the maximum altitude for flight!"
+      structure: "{PPREFIX} &cFlight is disabled near this structure!"
     pass: 
       default: "{PREFIX} &aYou may now fly!"
       combat: "{PREFIX} &aYou are no longer combat tagged, fly away!"
