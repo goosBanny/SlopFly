@@ -1,5 +1,29 @@
 # Maven
 /target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Server Runtime Artifacts & Databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+/run/
+/logs/
+*.log
+/plugins/
+crash-reports/
+.env
+.env.*
 
 # Eclipse
 .project
@@ -17,6 +41,8 @@ out/
 # VSCode
 .vscode/
 
-# OS
+# OS & Temp
 Thumbs.db
 .DS_Store
+*.tmp
+*.bak

@@ -1,0 +1,180 @@
+# ==============================================================================
+#                               TempFly Configuration
+# ==============================================================================
+# Modern temporary flight management plugin for Spigot / Paper servers.
+# Commands & Permissions: https://github.com/ChiefMoneyBags/TempFly
+# ==============================================================================
+
+system:
+  # Interval in minutes between automatic data persistence sweeps
+  backup: 5
+  # Verbose debug logging in console (only enable when diagnosing issues)
+  debug: false
+  # If true, region tracking is disabled. This saves CPU cycles but disables region flight rules.
+  disable_region_tracking: false
+  # If true, disables default tab completions for tempfly commands
+  disable_tab: false
+  # Storage engine for user flight balances: SQLITE, YAML, or MYSQL
+  # Default is SQLITE for zero-config high performance.
+  storage-type: SQLITE
+  # MySQL / MariaDB connection settings (only required when storage-type is MYSQL)
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    name: "tempfly"
+    user: ""
+    pass: "CHANGE_ME"
+
+movement:
+  # Movement detection mode: TASK or EVENT
+  # TASK: Polls player movement on a scheduled task (highly efficient, scales predictably with player count).
+  # EVENT: Listens to Bukkit PlayerMoveEvent (fires continuously per player).
+  mode: TASK
+  # The interval in ticks between movement checks when using TASK mode (default: 4 ticks)
+  task-interval-ticks: 4
+
+general:
+  # Prevents conflict with other flight plugins.
+  # If a player has a permission listed below, TempFly will not override /fly for them.
+  fly_override_permissions:
+    - 'essentials.fly'
+
+  # Disable flight in specific worlds or regions
+  disabled:
+    worlds:
+      - 'arena'
+    regions: []
+
+  # Allow flight only in whitelisted worlds or regions (empty list = allow everywhere not disabled)
+  whitelist:
+    worlds: []
+    regions: []
+
+  timer:
+    # If true, flight balance depletes even when flight mode is toggled off
+    constant: false
+    # If false, player does not lose flight time while standing on the ground
+    ground: false
+    # If false, player does not lose flight time while idle
+    idle: false
+    # If false, creative mode players do not consume flight time
+    creative: false
+    # If false, spectator mode players do not consume flight time
+    spectator: false
+
+  idle:
+    # Idle threshold in seconds (-1 to disable idle detection)
+    threshold: 300
+    # If true, disables flight if the player goes idle in mid-air
+    drop_player: false
+
+  flight:
+    speed:
+      # Default global flight speed (1.0 = vanilla speed)
+      default: 1.0
+      # If true, configured speeds act as caps and preserve player preference below cap
+      user_preference: true
+      worlds: {}
+      regions: []
+
+    # Maximum altitude before flight is automatically disabled
+    maximum_height: 275
+    # Automatically re-enable flight once a player leaves a restricted zone if flight was previously toggled on
+    auto_enable: true
+    # Automatically toggle flight on when receiving flight time if prior balance was 0
+    enable_on_time_received: false
+
+  time:
+    # Allow players to send flight time to other players via /tf pay
+    payable: false
+    max:
+      # Maximum flight balance in seconds (-1 for unlimited)
+      base: -1
+      # Permission group overrides: tempfly.max.<group>
+      groups:
+        # member: 3600
+        # vip: 86400
+
+    # Worlds/regions that automatically grant infinite flight without permission
+    infinite:
+      worlds: []
+      regions: []
+
+  bonus:
+    # Flight time in seconds granted upon first server join
+    first_join: 60
+    # Daily login bonus based on permission: tempfly.bonus.<group>
+    daily_login:
+      member: 60
+      vip: 300
+
+  time_decay:
+    # Decrement flight time while players are offline
+    enabled: false
+    # Interval in seconds between offline decay deductions
+    threshold: 3600
+    # Seconds of flight lost per interval
+    seconds_lost: 15
+
+  combat:
+    # Disable flight when player attacks another player (PvP)
+    attack_player: true
+    # Disable flight when player attacks a mob (PvE)
+    attack_mob: false
+    # Disable flight when attacked by another player (PvP)
+    attacked_by_player: true
+    # Disable flight when attacked by a mob (PvE)
+    attacked_by_mob: false
+    # Disable flight on self-inflicted damage
+    self_inflicted: false
+
+    # Seconds of combat tag applied after PvP combat
+    pvp_tag: 10
+    # Seconds of combat tag applied after PvE combat
+    pve_tag: 5
+
+  damage:
+    # Negate fall damage when flight is disabled by:
+    on_command: true
+    out_of_time: false
+    combat: true
+    idle: true
+    disabled_world: true
+    disabled_region: true
+    structure_proximity: true
+
+aesthetic:
+  particles:
+    # Particle trail display while flying
+    enabled: false
+    # Particle type to display
+    type: 'VILLAGER_HAPPY'
+    # Whether particle trails are shown by default without /tf settrail
+    display_by_default: false
+    # Hide particle trail if the player is vanished
+    hide_vanish: true
+
+  warning:
+    # Enable title/subtitle warnings when flight time is running low (messages configured in lang.yml)
+    enabled: true
+    # Time milestones in seconds to trigger warnings
+    seconds:
+      - 30
+      - 15
+      - 5
+
+  action_bar:
+    # Display remaining flight time on the action bar while flying (message configured in lang.yml)
+    # Automatically hidden when a player has infinite flight permission (tempfly.infinite)
+    enabled: true
+
+other:
+  # Multiplier for flight balance decay in specific worlds or regions
+  relative_time:
+    worlds: {}
+    regions: {}
+
+workarounds:
+  infinite_flight:
+    fix_a: false
+    fix_b: false

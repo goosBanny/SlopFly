@@ -1,0 +1,143 @@
+name: TempFly
+main: com.moneybags.tempfly.TempFly
+version: 3.1.7
+api-version: '1.21'
+description: Modern high-performance temporary flight management plugin for Paper and Spigot.
+softdepend:
+  - Vault
+  - PlaceholderAPI
+  - MVdWPlaceholderAPI
+  - WorldGuard
+  - WorldEdit
+  - Essentials
+  - Factions
+  - ASkyBlock
+  - BentoBox
+  - SuperiorSkyblock2
+  - IridiumSkyblock
+
+commands:
+  tempfly:
+    description: Primary management and user command for TempFly.
+    aliases: [tf, tfly]
+    permission: tempfly.toggle.self
+    usage: /<command> [help|fly|time|pay|speed|give|remove|set|reload]
+  fly:
+    description: Quick toggle for flight mode.
+    permission: tempfly.toggle.self
+    usage: /<command> [on|off|player]
+
+permissions:
+  tempfly.*:
+    description: Grants all permissions in TempFly
+    default: op
+    children:
+      tempfly.admin: true
+      tempfly.user: true
+
+  tempfly.admin:
+    description: Grants all administrative capabilities in TempFly
+    default: op
+    children:
+      tempfly.give: true
+      tempfly.giveall: true
+      tempfly.set: true
+      tempfly.remove: true
+      tempfly.reload: true
+      tempfly.help.admin: true
+      tempfly.bypass.toggle: true
+      tempfly.speed.other: true
+      tempfly.time.other: true
+      tempfly.toggle.other: true
+      tempfly.trails.remove.other: true
+      tempfly.trails.set.other: true
+      tempfly.disable_tab.bypass: true
+
+  tempfly.user:
+    description: Standard player permissions for TempFly
+    default: true
+    children:
+      tempfly.toggle.self: true
+      tempfly.time.self: true
+      tempfly.speed.self: true
+      tempfly.help: true
+      tempfly.pay: true
+      tempfly.trails: true
+      tempfly.trails.set.self: true
+      tempfly.trails.remove.self: true
+
+  tempfly.toggle.self:
+    description: Allows player to toggle their own flight
+    default: true
+  tempfly.toggle.other:
+    description: Allows toggling flight for other players
+    default: op
+  tempfly.time.self:
+    description: Allows player to check their own remaining flight time
+    default: true
+  tempfly.time.other:
+    description: Allows player to check another player's flight time
+    default: op
+  tempfly.pay:
+    description: Allows player to send flight time to another player
+    default: true
+  tempfly.speed.self:
+    description: Allows player to set their own flight speed
+    default: true
+  tempfly.speed.other:
+    description: Allows setting another player's flight speed
+    default: op
+  tempfly.infinite:
+    description: Grants infinite flight without consuming balance
+    default: op
+  tempfly.infinite.toggle:
+    description: Allows toggling infinite flight mode
+    default: op
+  tempfly.bypass:
+    description: Bypasses flight restrictions and zone checks
+    default: op
+  tempfly.bypass.toggle:
+    description: Allows toggling requirement bypass mode
+    default: op
+  tempfly.give:
+    description: Allows granting flight time to players
+    default: op
+  tempfly.giveall:
+    description: Allows granting flight time to all online players
+    default: op
+  tempfly.remove:
+    description: Allows deducting flight time from players
+    default: op
+  tempfly.set:
+    description: Allows setting a player's exact flight balance
+    default: op
+  tempfly.reload:
+    description: Allows reloading TempFly configuration and hooks
+    default: op
+  tempfly.help:
+    description: Allows viewing the command help menu
+    default: true
+  tempfly.help.admin:
+    description: Allows viewing administrative help commands
+    default: op
+  tempfly.trails:
+    description: Allows access to cosmetic particle flight trails
+    default: true
+  tempfly.trails.set.self:
+    description: Allows setting personal particle trail
+    default: true
+  tempfly.trails.set.other:
+    description: Allows setting another player's particle trail
+    default: op
+  tempfly.trails.remove.self:
+    description: Allows clearing personal particle trail
+    default: true
+  tempfly.trails.remove.other:
+    description: Allows clearing another player's particle trail
+    default: op
+  tempfly.disable_tab.bypass:
+    description: Bypasses tab-completion restrictions
+    default: op
+  tempfly.skyblock.island.settings:
+    description: Allows island owners to adjust skyblock flight settings
+    default: true

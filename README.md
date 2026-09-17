@@ -4,6 +4,20 @@ A modernized, high-performance, and hardened fork of **TempFly** for modern Pape
 
 ---
 
+## Attribution & License
+
+This project is a modified fork of **TempFly**, originally developed by **ChiefMoneyBags** ([GitHub: ChiefMoneyBags/TempFly](https://github.com/ChiefMoneyBags/TempFly)) and contributors.
+
+Licensed under the **GNU General Public License v3.0 (GPLv3)**. See [NOTICE.md](NOTICE.md) for full attribution and prominent notices of modifications per GPLv3 Section 5 requirements.
+
+---
+
+## Privacy & Telemetry
+
+* **Zero Telemetry:** All third-party telemetry, tracking, and metric reporting (including bStats) have been completely removed from this fork. No external network requests are made during server startup or runtime.
+
+---
+
 ## Key Highlights & Modern Overhauls
 
 ### 1. High-Performance Architecture
@@ -35,6 +49,7 @@ A modernized, high-performance, and hardened fork of **TempFly** for modern Pape
 
 ### 6. Deprecations & Streamlining
 * **Removed Legacy Shop GUI System:** The unused, legacy built-in GUI shop has been completely stripped out to reduce codebase bloat, prevent memory retention in inventory sessions, and delegate economy purchases to dedicated server shop or menu plugins where they belong.
+* **Clean Reflection Hooks:** MVdWPlaceholderAPI integration now runs purely via dynamic reflection, eliminating bundled binaries and brittle compile-time dependencies.
 * **Refined Infinite Flight & Bypass:** Fully resolved infinite time formatting across action bars, tab lists, name tags, Clip PlaceholderAPI, and MvdW PlaceholderAPI, cleanly rendering configured infinity symbols instead of broken numeric counters.
 
 ---
@@ -73,7 +88,7 @@ A modernized, high-performance, and hardened fork of **TempFly** for modern Pape
 
 ## External Integrations
 
-* **Placeholders:** Full integration with PlaceholderAPI (PAPI) and MVdWPlaceholderAPI.
+* **Placeholders:** Full integration with PlaceholderAPI (PAPI) and MVdWPlaceholderAPI (reflection-based hook).
 * **Economy:** Vault integration for economy balance support and flight time gifting.
 * **Territory & Protection:** WorldGuard, Towny, Factions, Lands, ASkyBlock, BentoBox, and GriefPrevention hooks for region-based flight restrictions and relative time consumption.
 

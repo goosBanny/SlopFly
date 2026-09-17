@@ -1,0 +1,63 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build and Test with Maven
+        run: mvn clean package --batch-mode --errors
+
+      - name: Prepare Rolling Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Delete existing local and remote tag 'latest' to force update pointing to HEAD
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa latest -m "Rolling Release: $(git rev-parse --short HEAD)"
+          git push origin latest --force
+
+      - name: Publish Rolling Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "TempFly Latest Release"
+          body: |
+            ## Automated Rolling Release
+            * **Commit:** `${{ github.sha }}`
+            * **Branch:** `${{ github.ref_name }}`
+            * **Built With:** Eclipse Temurin JDK 21
+          files: |
+            target/TempFly-*.jar
+            !target/*-sources.jar
+            !target/*-javadoc.jar
+            !target/original-*.jar
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
